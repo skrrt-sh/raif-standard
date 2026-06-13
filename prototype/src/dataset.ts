@@ -58,6 +58,18 @@ interface Args {
 }
 
 // Plan §3.4 — shapes withheld from training to measure generalization.
+//
+// Held-out balance (added in the v0.5 dataset overhaul): a held-out shape must
+// only test a HARDER/DIFFERENT surface of a mechanism the model has already
+// seen in training — never be the SOLE carrier of a wire-format mechanism, or
+// the holdout degenerates into "the model never learned this at all" instead
+// of measuring generalization. Two mechanisms used to be sole-carried by a
+// held-out shape; each now has an in-training carrier with a different shape:
+//   multiline `<<<…>>>` block   held: multiline_body      → train: record_with_note
+//   `<<<key>>>` key wrapping     held: pathological_keys    → train: dotted_paths
+//   bracket array under nesting  held: deep_array_literal   → train: nested_event_log
+//   homogeneous table form       held: large_table          → train: array_of_objects, large_table's bracket form is shared
+//   flat nested object           held: flat_inline_object   → train: nested_object (same path form under "generation")
 export const DEFAULT_HOLDOUT_SHAPES = [
   "multiline_body",
   "pathological_keys",
@@ -124,7 +136,7 @@ function printHelp(): void {
 
 // ─── Seeded RNG (Mulberry32) ─────────────────────────────────────────────
 
-function makeRng(seed: number): () => number {
+export function makeRng(seed: number): () => number {
   let s = seed | 0;
   return () => {
     s = (s + 0x6D2B79F5) | 0;
@@ -319,7 +331,7 @@ function makeLongText(r: () => number, lines: number): string {
 
 // ─── Per-shape variators ─────────────────────────────────────────────────
 
-type Mode = "normal" | "adversarial";
+export type Mode = "normal" | "adversarial";
 type Variator = (r: () => number, mode: Mode) => { json: JSONObject; description: string };
 
 function pickFieldNames(r: () => number, n: number): string[] {
@@ -616,11 +628,90 @@ const variators: Record<string, Variator> = {
     }
     return { json: { [tsF!]: arr }, description: `Compose an object with a ${n}-element timestamp array.` };
   },
+
+  // ── In-training mechanism carriers (see "Held-out balance" in the header) ──
+  // Each of these teaches a wire-format MECHANISM that is otherwise present
+  // ONLY in a held-out shape, so the model would never learn it. They use a
+  // DIFFERENT surface shape than their held-out counterpart, so the holdout
+  // stays a genuine generalization test rather than a "never saw the
+  // mechanism" failure.
+
+  // Carrier for the multiline `<<<…>>>` block (held-out twin: multiline_body).
+  // A record with extra scalar fields around a multiline note, so the model
+  // learns "value has newlines / schema says `t` → emit a block" in-distribution.
+  record_with_note: (r, mode) => {
+    const [authorF, titleF, noteF, countF, openF] = pickFieldNames(r, 5);
+    const lines = mode === "adversarial" ? intIn(r, 4, 10) : intIn(r, 2, 5);
+    let note = makeLongText(r, lines);
+    if (mode === "adversarial" && chance(r, 0.4)) {
+      // A content line that literally equals `>>>` forces the nonce-bounded
+      // form (ADR-0011) — the model must learn that branch too.
+      note = `${note}\n>>>\nplus a trailing remark`;
+    }
+    return {
+      json: {
+        [authorF!]: makeEmail(r),
+        [titleF!]: makeSentence(r),
+        [noteF!]: note,
+        [countF!]: intIn(r, 1, 999),
+        [openF!]: chance(r, 0.5),
+      },
+      description: "Compose a record that includes a multi-line note field.",
+    };
+  },
+
+  // Carrier for the `<<<key>>>` wrapping of path-significant keys (held-out
+  // twin: pathological_keys). Mixes ONE (or a few, adversarial) dotted/bracket
+  // key with normal keys — the wrapping rule is count-independent, so this
+  // generalizes to the heavier held-out case.
+  dotted_paths: (r, mode) => {
+    const n = mode === "adversarial" ? intIn(r, 2, 3) : 1;
+    const wrapped = pickN(r, [
+      "user.email", "items[0]", "data.id", "tags[]", "meta.more",
+      "config.default", "a.b.c", "stats.p95",
+    ], n);
+    const json: JSONObject = {};
+    for (const k of wrapped) {
+      json[k] = pick(r, [makeShortString(r), makeEmail(r), intIn(r, 1, 100)]) as JSONValue;
+    }
+    for (const k of pickFieldNames(r, intIn(r, 2, 4))) {
+      json[k] = pick(r, [makeShortString(r), intIn(r, 1, 999), chance(r, 0.5)]) as JSONValue;
+    }
+    return { json, description: "Compose an object mixing a dotted/bracketed key with normal keys." };
+  },
+
+  // Carrier for bracket-form arrays UNDER nesting (held-out twin:
+  // deep_array_literal, which is 3 levels deep). 2-level nesting around a
+  // heterogeneous array, so the model learns to keep emitting the inline
+  // `[ {…} ]` form when an array sits below the top level — countering the
+  // observed regression to invented `::` table syntax on unseen depths.
+  nested_event_log: (r, mode) => {
+    const [outerF, arrF] = pickFieldNames(r, 2);
+    const [typeF, targetF, pageF, valueF] = pickFieldNames(r, 4);
+    const n = mode === "adversarial" ? intIn(r, 5, 10) : intIn(r, 2, 5);
+    const rows: JSONObject[] = [];
+    for (let i = 0; i < n; i++) {
+      const kind = pick(r, ["click", "view", "submit"]);
+      const row: JSONObject = { [typeF!]: kind };
+      if (kind === "click") row[targetF!] = pick(r, ["button#submit", "a.cta"]);
+      else if (kind === "view") row[pageF!] = pick(r, ["/pricing", "/thanks"]);
+      else row[valueF!] = intIn(r, 1, 999);
+      rows.push(row);
+    }
+    return {
+      json: { [outerF!]: { [arrF!]: rows } },
+      description: "Compose a nested object containing a heterogeneous event array.",
+    };
+  },
 };
 
 const HARD_SHAPES = new Set([
   "pathological_keys", "numeric_string_ambiguity", "heterogeneous_array",
   "wide_heterogeneous_array", "deep_array_literal", "multiline_body",
+  // In-training mechanism carriers — their adversarial mode is what teaches the
+  // hard branch of each mechanism (nonce-bounded blocks, multi-wrapped keys,
+  // deeper/wider nested arrays).
+  "record_with_note", "dotted_paths", "nested_event_log",
 ]);
 
 // ─── Schema declaration ──────────────────────────────────────────────────
@@ -742,6 +833,9 @@ const TRANSLATE_OPENERS = [
   "Express the following object in RAIF:",
   "Rewrite this JSON payload as RAIF:",
   "Output the RAIF encoding of this JSON:",
+  "Encode the JSON below in RAIF:",
+  "Give me the RAIF form of this object:",
+  "Serialize this JSON to RAIF:",
 ] as const;
 
 const INSTRUCT_OPENERS = [
@@ -753,6 +847,9 @@ const INSTRUCT_OPENERS = [
   "Here is the data to capture.",
   "Record this information exactly as given.",
   "Assemble an object from these values.",
+  "Compose an object holding exactly these values.",
+  "Emit a RAIF object with the fields below.",
+  "Capture the following as a single object.",
 ] as const;
 
 // Each leaf is rendered with one of these templates; `p` is the dotted path,
@@ -764,6 +861,8 @@ const LEAF_TEMPLATES: ReadonlyArray<(p: string, v: string) => string> = [
   (p, v) => `The value of ${p} is ${v}.`,
   (p, v) => `For ${p}, use ${v}.`,
   (p, v) => `Put ${v} in ${p}.`,
+  (p, v) => `${p}: ${v}.`,
+  (p, v) => `Assign ${v} to ${p}.`,
 ];
 
 const EMPTY_LIST_TEMPLATES: ReadonlyArray<(p: string) => string> = [
@@ -833,7 +932,7 @@ function renderTranslateRequest(r: () => number, json: JSONObject): string {
 
 // ─── Example construction ────────────────────────────────────────────────
 
-interface Example {
+export interface Example {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   meta: {
     shape: string;
@@ -842,20 +941,24 @@ interface Example {
     mode: Mode;
     task: Task;
     source: JSONObject;
+    source_dataset?: string;  // set for real-JSON examples (e.g. "glaive-fc-v2")
   };
 }
 
-function buildExample(shape: string, seed: number, args: Args): Example {
-  const r = makeRng(seed);
-  const variator = variators[shape];
-  if (!variator) throw new Error(`no variator for shape: ${shape}`);
-  const mode: Mode = HARD_SHAPES.has(shape) && chance(r, args.adversarialFrac)
-    ? "adversarial" : "normal";
-  const { json } = variator(r, mode);
-  // Completions use the generation profile (ADR-0019): deterministic mode
-  // rules and truncation-optimal ordering are exactly what the model should
-  // learn to emit. Markers stay off — they are runtime framing, added by the
-  // serving layer, and would skew the token-Δ metric (ADR-0017).
+// The JSON → Example tail, shared by the synthetic generator and the
+// real-JSON ingester (`ingest_json.ts`). Given a concrete object, it picks the
+// task, renders the request (with <schema> per the same rules), encodes the
+// completion with the generation profile (ADR-0019: deterministic mode rules +
+// truncation-optimal order — exactly what the model should emit; markers stay
+// off per ADR-0017), and returns the full Example. Keeping this in ONE place is
+// what guarantees real-data examples are byte-identical in form to synthetic
+// ones — same schema block, same openers, same completion profile.
+export function renderExample(
+  json: JSONObject,
+  r: () => number,
+  schemaFrac: number,
+  metaBase: { shape: string; variation_seed: number; mode: Mode; source_dataset?: string },
+): Example {
   const raif = encode(json, { profile: "generation" });
   // ~50/50 task mix. Translate examples carry <schema> with prob schemaFrac;
   // instruct examples ALWAYS carry it (it is the field-name/type cue).
@@ -863,7 +966,7 @@ function buildExample(shape: string, seed: number, args: Args): Example {
   let userContent: string;
   let includeSchema: boolean;
   if (task === "translate") {
-    includeSchema = chance(r, args.schemaFrac);
+    includeSchema = chance(r, schemaFrac);
     const req = renderTranslateRequest(r, json);
     userContent = includeSchema
       ? `${req}\n\n<schema>\n${declareSchema(json)}\n</schema>`
@@ -877,8 +980,26 @@ function buildExample(shape: string, seed: number, args: Args): Example {
       { role: "user", content: userContent },
       { role: "assistant", content: raif },
     ],
-    meta: { shape, variation_seed: seed, has_schema: includeSchema, mode, task, source: json },
+    meta: {
+      shape: metaBase.shape,
+      variation_seed: metaBase.variation_seed,
+      has_schema: includeSchema,
+      mode: metaBase.mode,
+      task,
+      source: json,
+      ...(metaBase.source_dataset ? { source_dataset: metaBase.source_dataset } : {}),
+    },
   };
+}
+
+function buildExample(shape: string, seed: number, args: Args): Example {
+  const r = makeRng(seed);
+  const variator = variators[shape];
+  if (!variator) throw new Error(`no variator for shape: ${shape}`);
+  const mode: Mode = HARD_SHAPES.has(shape) && chance(r, args.adversarialFrac)
+    ? "adversarial" : "normal";
+  const { json } = variator(r, mode);
+  return renderExample(json, r, args.schemaFrac, { shape, variation_seed: seed, mode });
 }
 
 // ─── Driver ──────────────────────────────────────────────────────────────
@@ -888,7 +1009,7 @@ function ensureDir(filePath: string): void {
   if (dir && dir !== "." && !existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
-function writeJsonl(path: string, examples: Example[]): void {
+export function writeJsonl(path: string, examples: Example[]): void {
   ensureDir(path);
   const lines = examples.map((e) => JSON.stringify(e));
   writeFileSync(path, lines.length > 0 ? lines.join("\n") + "\n" : "");
@@ -995,10 +1116,12 @@ function main(): void {
   console.log(`with <schema> block: ${withSchema}/${all.length} (${Math.round(withSchema / all.length * 100)}%)`);
 }
 
-function hashString(s: string): number {
+export function hashString(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
   return h;
 }
 
-main();
+// Only run the synthetic generator when invoked directly (`bun run dataset.ts`),
+// NOT when imported by ingest_json.ts — importing must not write any files.
+if (import.meta.main) main();
