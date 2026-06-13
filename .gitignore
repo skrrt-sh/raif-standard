@@ -5,6 +5,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Generated demo recordings (rebuild with: vhs assets/raif-demo.tape)
+assets/raif-demo.gif
+assets/raif-demo.mp4
+
 # Local agent / editor state
 .claude/
 
