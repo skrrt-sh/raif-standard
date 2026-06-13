@@ -259,26 +259,34 @@ function isArrayLiteralEligible(v: JSONValue): boolean {
   return eligibleForInlineObject(v as JSONObject);
 }
 
-function encodeArrayLiteralElement(v: JSONValue): string {
+// Shared cell encoder for the three cell contexts (array-literal element,
+// inline-object cell, table cell). Primitive handling (null/boolean/number) and
+// the `<<<…>>>`-wrap mechanic for strings are identical across them; they differ
+// ONLY in which characters force a string wrap, passed as `needsWrap`. Returns
+// null for non-primitive values so each caller handles objects its own way
+// (array-literal flattens to an inline-object; inline/table reject).
+function encodePrimitiveCell(v: JSONValue, needsWrap: (s: string) => boolean): string | null {
   if (v === null) return "null";
   if (typeof v === "boolean") return String(v);
   if (typeof v === "number") return JSON.stringify(v);
-  if (typeof v === "string") {
-    // Row position: a line literally `]` would close the array, and a line
-    // literally `[` could be misread as an unterminated opener. Wrap both.
-    // Also keep the standard literal/inline-object wrap rules.
-    const needsWrap =
-      v.length === 0 ||
-      v.trim() !== v ||
-      v === "]" ||
-      v === "[" ||
-      v.startsWith(OPEN) ||
-      v === "[]" || v === "{}" ||
-      looksLikeLiteral(v) ||
-      looksLikeInlineObject(v);
-    if (needsWrap) return `${OPEN}${v}${CLOSE}`;
-    return v;
-  }
+  if (typeof v === "string") return needsWrap(v) ? `${OPEN}${v}${CLOSE}` : v;
+  return null;
+}
+
+function encodeArrayLiteralElement(v: JSONValue): string {
+  // Row position: a line literally `]` would close the array, and a line
+  // literally `[` could be misread as an unterminated opener. Wrap both. Also
+  // keep the standard literal/inline-object wrap rules.
+  const cell = encodePrimitiveCell(v, (s) =>
+    s.length === 0 ||
+    s.trim() !== s ||
+    s === "]" ||
+    s === "[" ||
+    s.startsWith(OPEN) ||
+    s === "[]" || s === "{}" ||
+    looksLikeLiteral(s) ||
+    looksLikeInlineObject(s));
+  if (cell !== null) return cell;
   // Object: must be a flat inline-object per eligibility above.
   return encodeInlineObject(v as JSONObject);
 }
@@ -387,50 +395,38 @@ function needsInlineKeyQuoting(k: string): boolean {
 }
 
 function encodeInlineCell(v: JSONValue): string {
-  if (v === null) return "null";
-  if (typeof v === "boolean") return String(v);
-  if (typeof v === "number") return JSON.stringify(v);
-  if (typeof v === "string") {
-    // `{` and a non-leading `<<<` are wrap triggers (ADR-0018): the decoder's
-    // top-level comma splitter tracks `{`-depth and skips `<<<…>>>` ranges, so
-    // either character appearing bare mid-cell desynchronizes the split and
-    // silently merges or drops neighboring cells.
-    const needsWrap =
-      v.length === 0 ||
-      v.trim() !== v ||
-      v.includes(",") ||
-      v.includes("}") ||
-      v.includes("{") ||
-      v.includes(OPEN) ||
-      v === "[]" ||
-      looksLikeLiteral(v);
-    if (needsWrap) return `${OPEN}${v}${CLOSE}`;
-    return v;
-  }
-  throw new Error(`unexpected inline cell: ${String(v)}`);
+  // `{` and a non-leading `<<<` are wrap triggers (ADR-0018): the decoder's
+  // top-level comma splitter tracks `{`-depth and skips `<<<…>>>` ranges, so
+  // either character appearing bare mid-cell desynchronizes the split and
+  // silently merges or drops neighboring cells.
+  const cell = encodePrimitiveCell(v, (s) =>
+    s.length === 0 ||
+    s.trim() !== s ||
+    s.includes(",") ||
+    s.includes("}") ||
+    s.includes("{") ||
+    s.includes(OPEN) ||
+    s === "[]" ||
+    looksLikeLiteral(s));
+  if (cell === null) throw new Error(`unexpected inline cell: ${String(v)}`);
+  return cell;
 }
 
 function encodeTableCell(v: JSONValue): string {
-  if (v === null) return "null";
-  if (typeof v === "boolean") return String(v);
-  if (typeof v === "number") return JSON.stringify(v);
-  if (typeof v === "string") {
-    // Same comma-splitter triggers as inline cells (ADR-0018), plus the
-    // opener-tail hazard: a table row is a whole line, so a final cell ending
-    // in `=<<<` / `=[` would turn the row into a block opener.
-    const needsWrap =
-      v.length === 0 ||
-      v.trim() !== v ||
-      v.includes(",") ||
-      v.includes("{") ||
-      v.includes(OPEN) ||
-      v === "[]" ||
-      looksLikeLiteral(v) ||
-      hasOpenerTail(v);
-    if (needsWrap) return `${OPEN}${v}${CLOSE}`;
-    return v;
-  }
-  throw new Error(`unexpected table cell value: ${String(v)}`);
+  // Same comma-splitter triggers as inline cells (ADR-0018), plus the
+  // opener-tail hazard: a table row is a whole line, so a final cell ending
+  // in `=<<<` / `=[` would turn the row into a block opener.
+  const cell = encodePrimitiveCell(v, (s) =>
+    s.length === 0 ||
+    s.trim() !== s ||
+    s.includes(",") ||
+    s.includes("{") ||
+    s.includes(OPEN) ||
+    s === "[]" ||
+    looksLikeLiteral(s) ||
+    hasOpenerTail(s));
+  if (cell === null) throw new Error(`unexpected table cell value: ${String(v)}`);
+  return cell;
 }
 
 // A string "looks like" an inline object if it would parse as `{key=val(,key=val)*}`.

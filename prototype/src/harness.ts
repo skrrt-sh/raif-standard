@@ -18,6 +18,7 @@
 import { encode as bpeEncode } from "gpt-tokenizer";
 import { decode, type JSONObject } from "./raif.ts";
 import { corpus } from "./corpus.ts";
+import { deepEqual } from "./json_equal.ts";
 import { buildPrompt } from "./harness_prompts.ts";
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
 
@@ -214,22 +215,6 @@ interface TrialResult {
   durationMs: number;
 }
 
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a === null || b === null) return false;
-  if (typeof a !== "object" || typeof b !== "object") return false;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
-  if (Array.isArray(a)) {
-    if ((a as unknown[]).length !== (b as unknown[]).length) return false;
-    return (a as unknown[]).every((v, i) => deepEqual(v, (b as unknown[])[i]));
-  }
-  const ka = Object.keys(a as object).sort();
-  const kb = Object.keys(b as object).sort();
-  if (ka.length !== kb.length) return false;
-  if (!ka.every((k, i) => k === kb[i])) return false;
-  return ka.every((k) => deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
-}
-
 function stripMarkdownFences(s: string): string {
   const m = s.match(/^\s*```[a-zA-Z]*\n([\s\S]*?)\n```\s*$/);
   return m ? m[1]! : s;
@@ -350,7 +335,13 @@ async function runAll(args: Args, apiKey: string | null, partialPath: string): P
                 partialPath,
                 JSON.stringify({ args, runAt: new Date().toISOString(), partial: completed < queue.length, results }, null, 2),
               );
-            } catch {}
+            } catch (e) {
+              // Don't lose the whole run over one failed checkpoint write, but
+              // surface it — a silent swallow hides a full disk / bad outDir.
+              console.error(
+                `[harness] failed to write partial results to ${partialPath}: ${(e as Error).message}`,
+              );
+            }
             inflight--;
             if (completed === queue.length) resolve();
             else tick();
