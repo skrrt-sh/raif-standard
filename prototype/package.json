@@ -2,6 +2,7 @@
   "name": "raif-prototype",
   "private": true,
   "type": "module",
+  "license": "Apache-2.0",
   "scripts": {
     "bench": "bun run src/bench.ts",
     "tui": "bun run src/tui.ts",
