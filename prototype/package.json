@@ -4,6 +4,7 @@
   "type": "module",
   "license": "Apache-2.0",
   "scripts": {
+    "demo": "bun run src/demo.ts",
     "bench": "bun run src/bench.ts",
     "tui": "bun run src/tui.ts",
     "check": "bun run src/check.ts",
