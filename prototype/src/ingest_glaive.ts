@@ -83,6 +83,9 @@ function parseArgs(argv: string[]): Args {
       process.exit(0);
     }
   }
+  if (!Number.isInteger(a.concurrency) || a.concurrency <= 0) {
+    throw new Error("--concurrency must be a positive integer");
+  }
   return a;
 }
 
@@ -171,9 +174,16 @@ async function pulled(args: Args): Promise<JSONObject[]> {
     await new Promise((res) => setTimeout(res, 150));
   }
   process.stderr.write("\n");
-  if (errors > offsets.length / 2)
-    console.error(`  ! ${errors}/${offsets.length} pages failed — likely rate-limited; retry with lower --concurrency or fewer --pages`);
-  // Never clobber a good cache with an empty/failed pull.
+  // Any failed page means a truncated pull — abort before writing outputs or
+  // caching, so a rate-limited run never clobbers a good cache or silently
+  // publishes a partial corpus. Retry with lower --concurrency or fewer --pages.
+  if (errors > 0) {
+    throw new Error(
+      `${errors}/${offsets.length} pages failed — likely rate-limited; `
+      + `aborting to avoid caching or writing a partial corpus. `
+      + `Retry with lower --concurrency or fewer --pages.`,
+    );
+  }
   if (args.cache && objs.length > 0) {
     await Bun.write(args.cache, objs.map((o) => JSON.stringify(o)).join("\n") + "\n");
     console.log(`  cached ${objs.length} raw args to ${args.cache}`);
