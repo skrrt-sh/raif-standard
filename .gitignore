@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Build / cache
+dist/
+*.tsbuildinfo
+
+# Local agent / editor state
+.claude/
+
+# OS
+.DS_Store

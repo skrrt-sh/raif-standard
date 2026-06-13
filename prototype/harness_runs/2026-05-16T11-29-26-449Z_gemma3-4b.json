@@ -1,0 +1,60 @@
+{
+  "args": {
+    "trials": 1,
+    "model": "gemma3:4b",
+    "url": "http://localhost:11434",
+    "shapes": [
+      "short_tool_call",
+      "nested_object"
+    ],
+    "concurrency": 2,
+    "outDir": "harness_runs"
+  },
+  "runAt": "2026-05-16T11:29:26.449Z",
+  "results": [
+    {
+      "shape": "short_tool_call",
+      "format": "raif",
+      "trial": 0,
+      "rawOutput": "to=client@example.com\nsubject=Invoice ready\nbody=Hello there\n",
+      "durationMs": 3062,
+      "parseOk": true,
+      "fidelityOk": true,
+      "repairsApplied": 0,
+      "outputTokens": 16
+    },
+    {
+      "shape": "short_tool_call",
+      "format": "json",
+      "trial": 0,
+      "rawOutput": "{\"body\":\"Hello there\",\"subject\":\"Invoice ready\",\"to\":\"client@example.com\"}\n",
+      "durationMs": 2447,
+      "parseOk": true,
+      "fidelityOk": true,
+      "repairsApplied": 0,
+      "outputTokens": 17
+    },
+    {
+      "shape": "nested_object",
+      "format": "raif",
+      "trial": 0,
+      "rawOutput": "user={id=123,name=Egor,email=e@example.com}\ntracking_id=abc-123\n",
+      "durationMs": 956,
+      "parseOk": true,
+      "fidelityOk": true,
+      "repairsApplied": 0,
+      "outputTokens": 20
+    },
+    {
+      "shape": "nested_object",
+      "format": "json",
+      "trial": 0,
+      "rawOutput": "{\"tracking_id\":\"abc-123\",\"user\":{\"email\":\"e@example.com\",\"id\":123,\"name\":\"Egor\"}}\n",
+      "durationMs": 833,
+      "parseOk": true,
+      "fidelityOk": true,
+      "repairsApplied": 0,
+      "outputTokens": 25
+    }
+  ]
+}
