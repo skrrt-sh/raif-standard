@@ -1,0 +1,11 @@
+# Python package build/test artifacts (raif)
+.venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
