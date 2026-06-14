@@ -116,6 +116,18 @@ function parseArgs(argv: string[]): Args {
   if ((a.outTrainPath || a.outEvalPath) && a.outPath === DEFAULTS.outPath) {
     a.outPath = null;  // split mode overrides single-file default
   }
+  // Fractions are probabilities — reject out-of-range values instead of letting
+  // `chance(r, frac)` silently saturate (e.g. --schema-frac 2 → always true).
+  for (const [name, val] of [
+    ["eval-frac", a.evalFrac],
+    ["schema-frac", a.schemaFrac],
+    ["adversarial-frac", a.adversarialFrac],
+  ] as const) {
+    if (!Number.isFinite(val) || val < 0 || val > 1) {
+      console.error(`error: --${name} must be a number in [0, 1], got ${val}`);
+      process.exit(1);
+    }
+  }
   return a;
 }
 

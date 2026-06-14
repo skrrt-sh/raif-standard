@@ -14,3 +14,6 @@ assets/raif-demo.mp4
 
 # OS
 .DS_Store
+
+# Generated benchmark/harness outputs (regenerate via bun run harness)
+prototype/harness_runs/

@@ -8,7 +8,7 @@
     "bench": "bun run src/bench.ts",
     "tui": "bun run src/tui.ts",
     "check": "bun run src/check.ts",
-    "test": "bun test src/test.ts",
+    "test": "bun test src/raif.test.ts",
     "harness": "bun run src/harness.ts",
     "dataset": "bun run src/dataset.ts",
     "compare": "bun src/compare_formats.ts",

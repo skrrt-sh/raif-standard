@@ -3,6 +3,7 @@
 
 import { encode, decode } from "./raif.ts";
 import { corpus } from "./corpus.ts";
+import { deepEqual } from "./json_equal.ts";
 import { encode as bpeEncode } from "gpt-tokenizer";
 
 const B = "\x1b[1m";
@@ -68,22 +69,6 @@ function render(): void {
   console.log(`${B}tokens:${RESET}  JSON-compact: ${jTok}   RAIF: ${rTok}   ${rTok < jTok ? G : R}Δ ${delta}${RESET}`);
   console.log("");
   console.log(`${D}[n] next  [p] prev  [q] quit${RESET}`);
-}
-
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a === null || b === null) return false;
-  if (typeof a !== "object" || typeof b !== "object") return false;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
-  if (Array.isArray(a)) {
-    if ((a as unknown[]).length !== (b as unknown[]).length) return false;
-    return (a as unknown[]).every((v, i) => deepEqual(v, (b as unknown[])[i]));
-  }
-  const ka = Object.keys(a as object).sort();
-  const kb = Object.keys(b as object).sort();
-  if (ka.length !== kb.length) return false;
-  if (!ka.every((k, i) => k === kb[i])) return false;
-  return ka.every((k) => deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
 }
 
 async function main(): Promise<void> {
