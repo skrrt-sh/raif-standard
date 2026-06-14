@@ -1,0 +1,211 @@
+{
+  "spec": "v0.5",
+  "function": "validate",
+  "note": "Generated from the RAIF TypeScript reference. Do not edit by hand.",
+  "cases": [
+    {
+      "name": "canonical__short_tool_call",
+      "input": "body=Hello there\nsubject=Invoice ready\nto=client@example.com",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "canonical__scalars_mixed",
+      "input": "bigish=12345678901234\nflag=true\nfloat=3.14\nnada=null\nneg=-17\nnum=42\noff=false\nstr=hello",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "canonical__nested_object",
+      "input": "tracking_id=abc-123\nuser={email=e@example.com,id=123,name=Egor}",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "canonical__array_of_objects",
+      "input": "items::id,name,qty\nitems[0]=1,foo,2\nitems[1]=2,bar,5\nitems[2]=3,baz,1",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "canonical__text_with_specials",
+      "input": "emoji=fire emoji 🔥 inline\nquery=a=1,b=2\nslug=name with spaces\ntitle=has \"quotes\" and {braces}",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "canonical__multiline_body",
+      "input": "body=<<<\nHi,\n\nThe outage started at 14:02 and recovered at 14:37.\n\nRoot cause: a stale \"config_cache\" entry.\n\nThanks,\nEgor\n>>>\nsubject=Postmortem\nto=ops@example.com",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "canonical__null_and_empties",
+      "input": "attachments=[]\nmetadata={}\nscheduled_at=null\ntags=[\nbilling\nurgent\n]",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "canonical__pathological_keys",
+      "input": "<<<items[0]>>>=literal-bracket-key\nnormal_key=ordinary value\n<<<user.email>>>=literal-dot-in-key@example.com",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "noncanonical__markdown_fence",
+      "input": "```\nactive=true\nuser={name=Ada}\n```",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__mode_markers",
+      "input": "<raif>\ncity=Oslo\nlat=59.9\n</raif>",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__separator_coerced",
+      "input": "active=true\nuser.name: Ada",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__fenced_with_lang",
+      "input": "```raif\nx=1\ny=2\n```",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__unterminated_array_eof",
+      "input": "mixed=[\n{a=1}\n{b=2}",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__mismatched_nonce",
+      "input": "body=<<<7f2a\nhello\n>>>7f2b",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__multiline_braces",
+      "input": "a={\nb=1\n}",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__delimiter_count_opener",
+      "input": "body=<<\nHi\nThere\n>>>",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__delimiter_count_closer",
+      "input": "body=<<<\nHi\nThere\n>>",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__repeated_keys",
+      "input": "mixed={kind=user,name=alice}\nmixed={kind=group,members=5}\nmixed={kind=user,name=bob,role=admin}",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__nested_inline",
+      "input": "data={user={id=7,handle=egor},meta={has_more=false}}",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__line_endings",
+      "input": "a=1\r\nb=2\r\n",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__unterminated_block_eof",
+      "input": "a=1\nbody=<<<\nline one\nline two",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__pathological_key",
+      "input": "user.email=x@y.z",
+      "schema": "<<<user.email>>>:s",
+      "valid": false
+    },
+    {
+      "name": "noncanonical__garbage",
+      "input": "this is not raif at all !!!",
+      "schema": null,
+      "valid": false
+    },
+    {
+      "name": "noncanonical__empty",
+      "input": "",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "schema__n_ok",
+      "input": "count=42",
+      "schema": "count:n",
+      "valid": true
+    },
+    {
+      "name": "schema__n_bad",
+      "input": "count=high",
+      "schema": "count:n",
+      "valid": false
+    },
+    {
+      "name": "schema__b_bad",
+      "input": "on=yes",
+      "schema": "on:b",
+      "valid": false
+    },
+    {
+      "name": "schema__missing_required",
+      "input": "to=a@b.c",
+      "schema": "to:s\nsubject:s",
+      "valid": false
+    },
+    {
+      "name": "schema__optional_absent_ok",
+      "input": "to=a@b.c",
+      "schema": "to:s\nnote:s?",
+      "valid": true
+    },
+    {
+      "name": "schema__unknown_field",
+      "input": "to=a@b.c\nextra=1",
+      "schema": "to:s",
+      "valid": false
+    },
+    {
+      "name": "schema__scalar_where_object",
+      "input": "user=5",
+      "schema": "user.id:n",
+      "valid": false
+    },
+    {
+      "name": "schema__required_in_array_elem",
+      "input": "items=[\n{id=1}\n]",
+      "schema": "items[].id:n\nitems[].name:s",
+      "valid": false
+    },
+    {
+      "name": "idempotent__canonical_doc",
+      "input": "a=1\nbody=<<<\nline1\nline2\n>>>\ns=x",
+      "schema": null,
+      "valid": true
+    },
+    {
+      "name": "idempotent__nonce_multiline",
+      "input": "body=<<<0ea4\na\n>>>\nb\n>>>0ea4",
+      "schema": null,
+      "valid": true
+    }
+  ]
+}

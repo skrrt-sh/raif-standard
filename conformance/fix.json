@@ -1,0 +1,225 @@
+{
+  "spec": "v0.5",
+  "function": "fix",
+  "note": "Generated from the RAIF TypeScript reference. Do not edit by hand.",
+  "cases": [
+    {
+      "name": "canonicalize__short_tool_call",
+      "input": "body=Hello there\nsubject=Invoice ready\nto=client@example.com",
+      "expected": "body=Hello there\nsubject=Invoice ready\nto=client@example.com",
+      "repairs": []
+    },
+    {
+      "name": "canonicalize__scalars_mixed",
+      "input": "bigish=12345678901234\nflag=true\nfloat=3.14\nnada=null\nneg=-17\nnum=42\noff=false\nstr=hello",
+      "expected": "bigish=12345678901234\nflag=true\nfloat=3.14\nnada=null\nneg=-17\nnum=42\noff=false\nstr=hello",
+      "repairs": []
+    },
+    {
+      "name": "canonicalize__nested_object",
+      "input": "tracking_id=abc-123\nuser.email=e@example.com\nuser.id=123\nuser.name=Egor",
+      "expected": "tracking_id=abc-123\nuser={email=e@example.com,id=123,name=Egor}",
+      "repairs": []
+    },
+    {
+      "name": "canonicalize__array_of_objects",
+      "input": "items::id,name,qty\nitems[0]=1,foo,2\nitems[1]=2,bar,5\nitems[2]=3,baz,1",
+      "expected": "items::id,name,qty\nitems[0]=1,foo,2\nitems[1]=2,bar,5\nitems[2]=3,baz,1",
+      "repairs": []
+    },
+    {
+      "name": "canonicalize__text_with_specials",
+      "input": "emoji=fire emoji 🔥 inline\nquery=a=1,b=2\nslug=name with spaces\ntitle=has \"quotes\" and {braces}",
+      "expected": "emoji=fire emoji 🔥 inline\nquery=a=1,b=2\nslug=name with spaces\ntitle=has \"quotes\" and {braces}",
+      "repairs": []
+    },
+    {
+      "name": "canonicalize__multiline_body",
+      "input": "subject=Postmortem\nto=ops@example.com\nbody=<<<\nHi,\n\nThe outage started at 14:02 and recovered at 14:37.\n\nRoot cause: a stale \"config_cache\" entry.\n\nThanks,\nEgor\n>>>",
+      "expected": "body=<<<\nHi,\n\nThe outage started at 14:02 and recovered at 14:37.\n\nRoot cause: a stale \"config_cache\" entry.\n\nThanks,\nEgor\n>>>\nsubject=Postmortem\nto=ops@example.com",
+      "repairs": []
+    },
+    {
+      "name": "canonicalize__null_and_empties",
+      "input": "attachments=[]\nmetadata={}\nscheduled_at=null\ntags=[\nbilling\nurgent\n]",
+      "expected": "attachments=[]\nmetadata={}\nscheduled_at=null\ntags=[\nbilling\nurgent\n]",
+      "repairs": []
+    },
+    {
+      "name": "canonicalize__pathological_keys",
+      "input": "<<<items[0]>>>=literal-bracket-key\nnormal_key=ordinary value\n<<<user.email>>>=literal-dot-in-key@example.com",
+      "expected": "<<<items[0]>>>=literal-bracket-key\nnormal_key=ordinary value\n<<<user.email>>>=literal-dot-in-key@example.com",
+      "repairs": []
+    },
+    {
+      "name": "fix__markdown_fence",
+      "input": "```\nactive=true\nuser={name=Ada}\n```",
+      "schema": null,
+      "expected": "active=true\nuser.name=Ada",
+      "repairs": [
+        "markdown_stripped"
+      ]
+    },
+    {
+      "name": "fix__mode_markers",
+      "input": "<raif>\ncity=Oslo\nlat=59.9\n</raif>",
+      "schema": null,
+      "expected": "city=Oslo\nlat=59.9",
+      "repairs": [
+        "mode_markers_stripped"
+      ]
+    },
+    {
+      "name": "fix__separator_coerced",
+      "input": "active=true\nuser.name: Ada",
+      "schema": null,
+      "expected": "active=true\nuser.name=<<< Ada>>>",
+      "repairs": [
+        "separator_coerced"
+      ]
+    },
+    {
+      "name": "fix__fenced_with_lang",
+      "input": "```raif\nx=1\ny=2\n```",
+      "schema": null,
+      "expected": "x=1\ny=2",
+      "repairs": [
+        "markdown_stripped"
+      ]
+    },
+    {
+      "name": "fix__unterminated_array_eof",
+      "input": "mixed=[\n{a=1}\n{b=2}",
+      "schema": null,
+      "expected": "mixed=[\n{a=1}\n{b=2}\n]",
+      "repairs": [
+        "unterminated_array_closed_at_eof"
+      ]
+    },
+    {
+      "name": "fix__mismatched_nonce",
+      "input": "body=<<<7f2a\nhello\n>>>7f2b",
+      "schema": null,
+      "expected": "body=hello",
+      "repairs": [
+        "mismatched_nonce_recovered"
+      ]
+    },
+    {
+      "name": "fix__multiline_braces",
+      "input": "a={\nb=1\n}",
+      "schema": null,
+      "expected": "a.b=1",
+      "repairs": [
+        "multiline_braces_flattened"
+      ]
+    },
+    {
+      "name": "fix__delimiter_count_opener",
+      "input": "body=<<\nHi\nThere\n>>>",
+      "schema": null,
+      "expected": "body=<<<\nHi\nThere\n>>>",
+      "repairs": [
+        "delimiter_count_repaired"
+      ]
+    },
+    {
+      "name": "fix__delimiter_count_closer",
+      "input": "body=<<<\nHi\nThere\n>>",
+      "schema": null,
+      "expected": "body=<<<\nHi\nThere\n>>>",
+      "repairs": [
+        "delimiter_count_repaired"
+      ]
+    },
+    {
+      "name": "fix__repeated_keys",
+      "input": "mixed={kind=user,name=alice}\nmixed={kind=group,members=5}\nmixed={kind=user,name=bob,role=admin}",
+      "schema": null,
+      "expected": "mixed=[\n{kind=user,name=alice}\n{kind=group,members=5}\n{kind=user,name=bob,role=admin}\n]",
+      "repairs": [
+        "repeated_keys_indexed"
+      ]
+    },
+    {
+      "name": "fix__nested_inline",
+      "input": "data={user={id=7,handle=egor},meta={has_more=false}}",
+      "schema": null,
+      "expected": "data.meta.has_more=false\ndata.user={handle=egor,id=7}",
+      "repairs": [
+        "nested_inline_flattened"
+      ]
+    },
+    {
+      "name": "fix__line_endings",
+      "input": "a=1\r\nb=2\r\n",
+      "schema": null,
+      "expected": "a=1\nb=2",
+      "repairs": [
+        "line_endings_normalized"
+      ]
+    },
+    {
+      "name": "fix__unterminated_block_eof",
+      "input": "a=1\nbody=<<<\nline one\nline two",
+      "schema": null,
+      "expected": "a=1\nbody=<<<\nline one\nline two\n>>>",
+      "repairs": [
+        "unterminated_block_closed_at_eof"
+      ]
+    },
+    {
+      "name": "fix__pathological_key",
+      "input": "user.email=x@y.z",
+      "schema": "<<<user.email>>>:s",
+      "expected": "<<<user.email>>>=x@y.z",
+      "repairs": [
+        "pathological_key_resolved"
+      ]
+    },
+    {
+      "name": "fix_schema__scalar_s_keeps_strings",
+      "input": "flag=true\nplaceholder=null\npriority=2",
+      "schema": "placeholder:s\npriority:s\nflag:s",
+      "expected": "flag:s=true\nplaceholder:s=null\npriority:s=2",
+      "repairs": []
+    },
+    {
+      "name": "fix_schema__table_cell_typed",
+      "input": "items::id,note\nitems[0]=1,null\nitems[1]=2,true",
+      "schema": "items[].id:n\nitems[].note:s",
+      "expected": "items=[\n{id=1,note=<<<null>>>}\n{id=2,note=<<<true>>>}\n]",
+      "repairs": []
+    },
+    {
+      "name": "fix_schema__inline_object_typed",
+      "input": "user={id=7,tag=42}",
+      "schema": "user.id:n\nuser.tag:s",
+      "expected": "user.id=7\nuser.tag:s=42",
+      "repairs": []
+    },
+    {
+      "name": "fix_schema__pathological_key",
+      "input": "user.email=x@y.z",
+      "schema": "<<<user.email>>>:s",
+      "expected": "<<<user.email>>>=x@y.z",
+      "repairs": [
+        "pathological_key_resolved"
+      ]
+    },
+    {
+      "name": "idempotent__canonical_doc",
+      "input": "a=1\nbody=<<<\nline1\nline2\n>>>\ns=x",
+      "schema": null,
+      "expected": "a=1\nbody=<<<\nline1\nline2\n>>>\ns=x",
+      "repairs": []
+    },
+    {
+      "name": "idempotent__nonce_multiline",
+      "input": "body=<<<0ea4\na\n>>>\nb\n>>>0ea4",
+      "schema": null,
+      "expected": "body=<<<0ea4\na\n>>>\nb\n>>>0ea4",
+      "repairs": []
+    }
+  ]
+}
