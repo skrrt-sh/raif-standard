@@ -384,7 +384,7 @@ Type-system principle: values use **JSON semantics verbatim**. RAIF does not int
 For any in-scope JSON object `J`:
 
 - `decode(encode(J))` equals `J` as JSON values. Object key order is not preserved across the round-trip (RAIF re-emits in UTF-8 byte order).
-- `encode(decode(encode(J)))` is byte-identical to `encode(J)` after canonical RAIF-R normalization, modulo random multiline nonces (which differ run-to-run).
+- `encode(decode(encode(J)))` is byte-identical to `encode(J)` after canonical RAIF-R normalization. (Multiline nonces are deterministic — derived from block content per [ADR-0018](./adr/0018-round-trip-hardening.md) — so they no longer differ run-to-run.)
 - Number precision inherits the host language. Strings, booleans, and `null` are byte-exact.
 
 ---

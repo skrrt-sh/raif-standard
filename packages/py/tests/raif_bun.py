@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -32,8 +33,7 @@ INPUT_ENV = "RAIF_BRIDGE_INPUT"
 def available() -> bool:
     """True when both `bun` and the in-repo TS reference are present."""
     return (
-        subprocess.run(["which", "bun"], capture_output=True).returncode == 0
-        and (RAIF_JS_DIR / "src" / "raif.ts").exists()
+        shutil.which("bun") is not None and (RAIF_JS_DIR / "src" / "raif.ts").exists()
     )
 
 
@@ -41,8 +41,8 @@ def run_bridge(script: str, payload, timeout: float) -> list:
     """Run `bun -e <script>` against `payload` (written to a temp file the script
     reads via `RAIF_BRIDGE_INPUT`) and return the JSON list it writes to stdout.
 
-    All failure paths (non-zero exit, timeout, invalid/non-list output) raise
-    RuntimeError, so callers see one stable failure type."""
+    All failure paths (startup error, non-zero exit, timeout, invalid/non-list
+    output) raise RuntimeError, so callers see one stable failure type."""
     fd, tmp = tempfile.mkstemp(suffix=".json", prefix="raif_bun_")
     try:
         with os.fdopen(fd, "w") as f:
@@ -57,6 +57,9 @@ def run_bridge(script: str, payload, timeout: float) -> list:
             )
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError(f"bun bridge timed out after {timeout}s") from exc
+        except OSError as exc:
+            # bun missing / RAIF_JS_DIR invalid — covers FileNotFoundError.
+            raise RuntimeError(f"bun bridge could not start: {exc}") from exc
     finally:
         os.unlink(tmp)
     if res.returncode != 0:
