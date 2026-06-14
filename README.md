@@ -137,6 +137,9 @@ local, and self-hosted inference:
 - Tiny: [**skrrt-sh/raif-qwen2.5-0.5b-lora**](https://huggingface.co/skrrt-sh/raif-qwen2.5-0.5b-lora) — the same recipe on a 6×-smaller base (97% parse, 81% holdout fidelity); a study in how far a tiny local model can be pushed
 - Training workstream: [**raif-lora**](https://github.com/skrrt-sh/raif-lora)
 
+These models emit RAIF, not JSON — decode their output with the package above
+(`pip install raif-format` → `from raif import decode`, or `raif-format` on npm).
+
 ## Scope
 
 RAIF covers a single JSON object of LLM output: strings, numbers, booleans, nulls,

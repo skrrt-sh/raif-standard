@@ -64,6 +64,19 @@ decode("priority=2\nnote=hi", schema)
 
 `opts` is `{"profile": "canonical" | "generation", "markers": bool}`.
 
+## The RAIF ecosystem
+
+`raif-format` is the Python codec (installs as `raif-format`, imports as `raif`);
+everything else builds on the same format.
+
+- **Spec, ADRs & conformance corpus:** [`raif-standard`](https://github.com/skrrt-sh/raif-standard)
+- **JavaScript/TypeScript package, same name:** [`raif-format` on npm](https://www.npmjs.com/package/raif-format)
+- **Models that emit RAIF natively** — LoRA fine-tunes that make small/local models output RAIF instead of JSON. Decode their output with this package: `decode(model_output)["value"]`.
+  - [`skrrt-sh/raif-llama-3.2-3b-lora`](https://huggingface.co/skrrt-sh/raif-llama-3.2-3b-lora) — clears the v0.5 gate (100% parse / 95% fidelity)
+  - [`skrrt-sh/raif-qwen3-4b-lora`](https://huggingface.co/skrrt-sh/raif-qwen3-4b-lora) — agent-grade, runs on ~14 GB VRAM
+  - [`skrrt-sh/raif-qwen2.5-0.5b-lora`](https://huggingface.co/skrrt-sh/raif-qwen2.5-0.5b-lora) — a 6×-smaller-base study
+  - Training & eval recipe: [`raif-lora`](https://github.com/skrrt-sh/raif-lora)
+
 ## License
 
 Apache-2.0

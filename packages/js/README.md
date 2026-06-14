@@ -66,6 +66,18 @@ decode("priority=2\nnote=hi", schema);
 `opts` is `{ profile?: "canonical" \| "generation"; markers?: boolean }`. The
 package ships dual ESM + CommonJS builds with type declarations for each.
 
+## The RAIF ecosystem
+
+`raif-format` is the reference codec; everything else builds on it.
+
+- **Spec, ADRs & conformance corpus:** [`raif-standard`](https://github.com/skrrt-sh/raif-standard) (this monorepo)
+- **Python package, same name:** [`raif-format` on PyPI](https://pypi.org/project/raif-format/) — `pip install raif-format` (imports as `raif`)
+- **Models that emit RAIF natively** — LoRA fine-tunes that make small/local models output RAIF instead of JSON. Decode their output with this package: `decode(modelOutput).value`.
+  - [`skrrt-sh/raif-llama-3.2-3b-lora`](https://huggingface.co/skrrt-sh/raif-llama-3.2-3b-lora) — clears the v0.5 gate (100% parse / 95% fidelity)
+  - [`skrrt-sh/raif-qwen3-4b-lora`](https://huggingface.co/skrrt-sh/raif-qwen3-4b-lora) — agent-grade, runs on ~14 GB VRAM
+  - [`skrrt-sh/raif-qwen2.5-0.5b-lora`](https://huggingface.co/skrrt-sh/raif-qwen2.5-0.5b-lora) — a 6×-smaller-base study
+  - Training & eval recipe: [`raif-lora`](https://github.com/skrrt-sh/raif-lora)
+
 ## Development
 
 This package lives in the [raif-standard](https://github.com/skrrt-sh/raif-standard)
