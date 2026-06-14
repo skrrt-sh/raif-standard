@@ -108,7 +108,9 @@ A Llama-3.2-3B LoRA that natively emits RAIF instead of JSON is published on
 Hugging Face — it brings the token savings and truncation recovery to small,
 local, and self-hosted inference:
 
-- Model: [**skrrt-sh/raif-llama-3.2-3b-lora**](https://huggingface.co/skrrt-sh/raif-llama-3.2-3b-lora)
+- Model: [**skrrt-sh/raif-llama-3.2-3b-lora**](https://huggingface.co/skrrt-sh/raif-llama-3.2-3b-lora) — clears the v0.5 acceptance gate (100% / 95%)
+- Agent-grade: [**skrrt-sh/raif-qwen3-4b-lora**](https://huggingface.co/skrrt-sh/raif-qwen3-4b-lora) — Qwen3-4B for real self-hosted agents (~14 GB VRAM); holdout 98% parse / 95% fidelity, clears 3/4 gate metrics with margin
+- Tiny: [**skrrt-sh/raif-qwen2.5-0.5b-lora**](https://huggingface.co/skrrt-sh/raif-qwen2.5-0.5b-lora) — same recipe on a 6×-smaller base; a study in how far a tiny local model can be pushed
 - Training workstream: [**raif-lora**](https://github.com/skrrt-sh/raif-lora)
 
 ## Scope
