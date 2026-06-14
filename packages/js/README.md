@@ -1,10 +1,11 @@
 # raif-format
 
-**RAIF** — a token-efficient, repair-tolerant interchange format for the JSON
-object an LLM emits. The canonical TypeScript reference implementation: pure,
-zero runtime dependencies, fully typed. Decodes losslessly back to JSON, repairs
-the common failure modes of generated output, and costs ~14% fewer tokens than
-JSON.
+**RAIF** — a token-efficient, repair-tolerant layer for the JSON language models
+produce: structured outputs, strict objects, JSON mode, tool arguments. The
+canonical TypeScript reference implementation: pure, zero runtime dependencies,
+fully typed. Decodes losslessly back to JSON, repairs the common failure modes of
+generated output, and costs ~14% fewer tokens than JSON. Tool calls are one use
+case, not the point.
 
 - Spec & monorepo: <https://github.com/skrrt-sh/raif-standard>
 - Python package: `raif-format` on PyPI

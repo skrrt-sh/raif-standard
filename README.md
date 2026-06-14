@@ -7,8 +7,9 @@
 <p align="center"><strong>Repairable AI Interchange Format</strong></p>
 
 <p align="center">
-  A wire format for the JSON object an LLM emits for a tool call. It repairs its own<br>
-  syntax errors, round-trips losslessly to JSON, and costs ~14% fewer tokens.
+  A drop-in layer for the JSON language models produce — structured outputs, JSON mode,<br>
+  strict objects, tool arguments alike. It repairs its own syntax errors, round-trips<br>
+  losslessly to JSON, and costs ~14% fewer tokens.
 </p>
 
 <p align="center">
@@ -29,6 +30,11 @@ RAIF inverts the assumption. The writer is a model; the reader is an interpreter
 that can **repair, validate, and canonicalize**. The format is line-oriented,
 value-first, and built so that the common failure modes of generated output are
 recoverable by construction.
+
+It isn't tied to any one API or feature. RAIF is a drop-in layer for *whatever*
+makes a model produce JSON — structured outputs, JSON/strict mode, response
+schemas, function arguments — and it makes that JSON lighter, self-repairing, and
+lossless. Tool calls are one use case, not the point.
 
 ```ts
 import { encode, decode } from "raif-format";
