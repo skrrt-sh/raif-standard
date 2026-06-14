@@ -1,5 +1,5 @@
 [project]
-name = "raif"
+name = "raif-format"
 version = "0.5.0"
 description = "A token-efficient, repair-tolerant interchange format for LLM I/O — pure-Python encode/decode/fix/validate."
 readme = "README.md"

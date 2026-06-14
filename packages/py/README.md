@@ -1,4 +1,4 @@
-# raif (Python)
+# raif-format (Python)
 
 Pure-Python implementation of **RAIF** — a token-efficient, repair-tolerant
 interchange format for LLM input/output. Stdlib only, no runtime dependencies,
@@ -8,13 +8,15 @@ This package mirrors the canonical TypeScript reference byte-for-byte; parity is
 pinned by a shared conformance corpus.
 
 - Spec & monorepo: <https://github.com/skrrt-sh/raif-standard>
-- JavaScript/TypeScript package: `raif` on npm
+- JavaScript/TypeScript package: `raif-format` on npm
 
 ## Install
 
 ```sh
-pip install raif        # or: uv add raif
+pip install raif-format        # or: uv add raif-format
 ```
+
+Installs the `raif-format` distribution; the import package is `raif`.
 
 ## Usage
 

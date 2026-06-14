@@ -43,7 +43,7 @@ raif-lora/                           ← new repo, sibling of raif-standard/
 └── adapters/                        ← gitignored; LoRA outputs land here
 ```
 
-The `raif-standard` monorepo stays focused on the encoder/decoder packages, conformance corpus, and bench harness (`packages/js`, `packages/py`, `conformance/`). The `raif-lora/` repo depends on the published **`raif` PyPI package** (`pip install raif` / `uv add raif`) and imports `encode` / `decode` / `fix` / `validate` directly — the Python implementation now exists (full surface, stdlib-only, no `bun` at runtime), so there is no shelling out to `bun` and no `-e` install against the monorepo. (Today `raif-lora` still ships its own decoder; depending on the published package is the intended direction.)
+The `raif-standard` monorepo stays focused on the encoder/decoder packages, conformance corpus, and bench harness (`packages/js`, `packages/py`, `conformance/`). The `raif-lora/` repo depends on the published **`raif-format` PyPI package** (`pip install raif-format` / `uv add raif-format`, imports as `raif`) and uses `encode` / `decode` / `fix` / `validate` directly — the Python implementation now exists (full surface, stdlib-only, no `bun` at runtime), so there is no shelling out to `bun` and no `-e` install against the monorepo. (Today `raif-lora` still ships its own decoder; depending on the published package is the intended direction.)
 
 ## 3. Dataset construction
 

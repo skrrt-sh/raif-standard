@@ -1,4 +1,4 @@
-# raif
+# raif-format
 
 **RAIF** — a token-efficient, repair-tolerant interchange format for the JSON
 object an LLM emits. The canonical TypeScript reference implementation: pure,
@@ -7,18 +7,18 @@ the common failure modes of generated output, and costs ~14% fewer tokens than
 JSON.
 
 - Spec & monorepo: <https://github.com/skrrt-sh/raif-standard>
-- Python package: `raif` on PyPI
+- Python package: `raif-format` on PyPI
 
 ## Install
 
 ```sh
-bun add @skrrt-sh/raif        # or: npm install @skrrt-sh/raif / pnpm add @skrrt-sh/raif
+bun add raif-format        # or: npm install raif-format / pnpm add raif-format
 ```
 
 ## Usage
 
 ```ts
-import { encode, decode, decodeLenient, fix, validate, parseSchema } from "@skrrt-sh/raif";
+import { encode, decode, decodeLenient, fix, validate, parseSchema } from "raif-format";
 
 // JSON object -> canonical RAIF
 encode({ to: "a@b.com", subject: "hi" });
