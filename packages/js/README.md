@@ -12,13 +12,13 @@ JSON.
 ## Install
 
 ```sh
-bun add raif        # or: npm install raif / pnpm add raif
+bun add @skrrt-sh/raif        # or: npm install @skrrt-sh/raif / pnpm add @skrrt-sh/raif
 ```
 
 ## Usage
 
 ```ts
-import { encode, decode, decodeLenient, fix, validate, parseSchema } from "raif";
+import { encode, decode, decodeLenient, fix, validate, parseSchema } from "@skrrt-sh/raif";
 
 // JSON object -> canonical RAIF
 encode({ to: "a@b.com", subject: "hi" });
