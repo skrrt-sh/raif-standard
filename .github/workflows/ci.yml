@@ -55,20 +55,17 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint (biome)
-        run: bunx biome check
+      - name: Lint
+        run: bun run lint
 
       - name: Typecheck
         run: bun run typecheck
 
       - name: Test
-        run: bun test
+        run: bun run test
 
       - name: Build
         run: bun run build
 
-      - name: Lint published package (publint)
-        run: bunx publint
-
-      - name: Check types (@arethetypeswrong/cli)
-        run: bunx @arethetypeswrong/cli --pack .
+      - name: Package checks (publint + arethetypeswrong)
+        run: bun run check:pack
