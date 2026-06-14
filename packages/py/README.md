@@ -1,8 +1,9 @@
 # raif-format (Python)
 
-Pure-Python implementation of **RAIF** — a token-efficient, repair-tolerant
-interchange format for LLM input/output. Stdlib only, no runtime dependencies,
-fully typed (PEP 561).
+Pure-Python implementation of **RAIF** — a token-efficient, repair-tolerant layer
+for the JSON language models produce: structured outputs, strict objects, JSON
+mode, tool arguments. Stdlib only, no runtime dependencies, fully typed (PEP 561).
+Tool calls are one use case, not the point.
 
 This package mirrors the canonical TypeScript reference byte-for-byte; parity is
 pinned by a shared conformance corpus.
