@@ -1,0 +1,7 @@
+# Pins every toolchain for the RAIF monorepo so JS and Python builds are
+# reproducible across machines and CI. `mise install` provisions all of these.
+[tools]
+node = "24.12.0"
+bun = "1.3.13"
+python = "3.13"
+uv = "0.11.14"
