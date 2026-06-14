@@ -1,0 +1,153 @@
+name: Py Release
+
+# Release pipeline for the Python `raif` package via PyPI Trusted Publishing
+# (OIDC; no long-lived API token). PEP 740 attestations are attached
+# automatically by the publish action under OIDC.
+#
+# Tags `py-v*`  -> build + publish to PyPI.
+# Branch `release/*` push -> build + publish to TestPyPI (rehearsal).
+#
+# ── ONE-TIME MANUAL SETUP (required before this workflow can publish) ──────────
+#   1. Register the Trusted Publisher on PyPI for project `raif`:
+#        PyPI -> "Publishing" / project settings -> add a GitHub Actions
+#        trusted publisher with:
+#          Owner:               skrrt-sh
+#          Repository:          raif-standard
+#          Workflow filename:   py-release.yml
+#          Environment:         pypi
+#      Do the same on test.pypi.org with environment `testpypi`.
+#   2. Create the `pypi` and `testpypi` GitHub Environments on the repo
+#      (Settings -> Environments) and add any desired protection rules.
+#   3. NAME AVAILABILITY: the project name `raif` may already be taken on PyPI.
+#      If registration of `raif` is not possible, the agreed fallback is
+#      `raif-format` — but this is a NAMING DECISION for a maintainer, not the
+#      CI. If you change the distribution name, update BOTH `pyproject.toml`
+#      (`[project] name`) and the trusted-publisher project name above. Flag
+#      this before the first publish; do not decide it unilaterally here.
+#   NOTE: PyPI cannot attach a trusted publisher to a project that does not yet
+#   exist. For a brand-new name, use PyPI's "pending publisher" flow (register
+#   the publisher before the first upload) so the very first release works over
+#   OIDC with no manual token publish.
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    tags:
+      - "py-v*"
+    branches:
+      - "release/*"
+    paths:
+      - "packages/py/**"
+      - ".github/workflows/py-release.yml"
+
+# Default-deny at the top level. Each job re-grants the minimum it needs.
+permissions: {}
+
+concurrency:
+  group: py-release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: packages/py
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden runner
+        # pin to SHA
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        # pin to SHA
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup uv
+        # pin to SHA
+        uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6.4.3
+        with:
+          version: "0.11.14"
+          # No action caching in the release pipeline — keep the supply chain lean.
+          enable-cache: false
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Upload distributions
+        # pin to SHA
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: packages/py/dist/
+
+  publish-to-testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: startsWith(github.ref, 'refs/heads/release/')
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write # PyPI Trusted Publishing (OIDC)
+      contents: read
+
+    steps:
+      - name: Harden runner
+        # pin to SHA
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Download distributions
+        # pin to SHA
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: python-package-distributions
+          path: packages/py/dist/
+
+      - name: Publish to TestPyPI
+        # pin to SHA — Trusted Publishing: no username/password.
+        uses: pypa/gh-action-pypi-publish@7f25271a4aa483500f742f9492b2ab5648d61011 # v1.12.4
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: packages/py/dist/
+          skip-existing: true
+
+  publish-to-pypi:
+    name: Publish to PyPI
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/py-v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # PyPI Trusted Publishing (OIDC)
+      contents: read
+
+    steps:
+      - name: Harden runner
+        # pin to SHA
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Download distributions
+        # pin to SHA
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: python-package-distributions
+          path: packages/py/dist/
+
+      - name: Publish to PyPI
+        # pin to SHA — Trusted Publishing: no username/password. PEP 740
+        # attestations are generated and attached automatically under OIDC.
+        uses: pypa/gh-action-pypi-publish@7f25271a4aa483500f742f9492b2ab5648d61011 # v1.12.4
+        with:
+          packages-dir: packages/py/dist/

@@ -1,0 +1,130 @@
+{
+  "spec": "v0.5",
+  "function": "lenient",
+  "note": "Generated from the RAIF TypeScript reference. Do not edit by hand.",
+  "cases": [
+    {
+      "name": "cut_midstream",
+      "input": "<raif>\ncity=Oslo\nlat",
+      "schema": null,
+      "expected": {
+        "city": "Oslo"
+      },
+      "truncated": true,
+      "errorCount": 1,
+      "repairs": [
+        "missing_close_marker",
+        "mode_markers_stripped"
+      ]
+    },
+    {
+      "name": "complete",
+      "input": "city=Oslo\nlat=59.9",
+      "schema": null,
+      "expected": {
+        "city": "Oslo",
+        "lat": 59.9
+      },
+      "truncated": false,
+      "errorCount": 0,
+      "repairs": []
+    },
+    {
+      "name": "fence_unclosed",
+      "input": "```\nx=1\ny=2",
+      "schema": null,
+      "expected": {
+        "x": 1,
+        "y": 2
+      },
+      "truncated": false,
+      "errorCount": 1,
+      "repairs": []
+    },
+    {
+      "name": "garbage_line_between_leaves",
+      "input": "good=1\n@@@garbage\nalso=2",
+      "schema": null,
+      "expected": {
+        "good": 1,
+        "also": 2
+      },
+      "truncated": false,
+      "errorCount": 1,
+      "repairs": []
+    },
+    {
+      "name": "bad_table_row_skipped",
+      "input": "items::id,name\nitems[0]=1,foo\nitems[1]=2\nitems[2]=3,baz",
+      "schema": null,
+      "expected": {},
+      "truncated": false,
+      "errorCount": 2,
+      "repairs": []
+    },
+    {
+      "name": "path_collision_first_wins",
+      "input": "a=1\na.b=2",
+      "schema": null,
+      "expected": {
+        "a": 1
+      },
+      "truncated": false,
+      "errorCount": 1,
+      "repairs": []
+    },
+    {
+      "name": "marker_missing_close",
+      "input": "<raif>\na=1\nb=2",
+      "schema": null,
+      "expected": {
+        "a": 1,
+        "b": 2
+      },
+      "truncated": true,
+      "errorCount": 0,
+      "repairs": [
+        "missing_close_marker",
+        "mode_markers_stripped"
+      ]
+    },
+    {
+      "name": "eof_closed_multiline",
+      "input": "a=1\nbody=<<<\ncut off here",
+      "schema": null,
+      "expected": {
+        "a": 1,
+        "body": "cut off here"
+      },
+      "truncated": true,
+      "errorCount": 0,
+      "repairs": [
+        "unterminated_block_closed_at_eof"
+      ]
+    },
+    {
+      "name": "marker_looking_values",
+      "input": "body=<<<\nx\n<raif>\ny\n>>>\ns=<raif>\nt=a </raif> b",
+      "schema": null,
+      "expected": {
+        "body": "x\n<raif>\ny",
+        "s": "<raif>",
+        "t": "a </raif> b"
+      },
+      "truncated": false,
+      "errorCount": 0,
+      "repairs": []
+    },
+    {
+      "name": "schema_per_leaf_error",
+      "input": "to=a@b.c\ncount=high",
+      "schema": "to:s\ncount:n",
+      "expected": {
+        "to": "a@b.c"
+      },
+      "truncated": false,
+      "errorCount": 2,
+      "repairs": []
+    }
+  ]
+}

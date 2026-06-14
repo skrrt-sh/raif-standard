@@ -1,0 +1,879 @@
+{
+  "spec": "v0.5",
+  "function": "encode",
+  "note": "Generated from the RAIF TypeScript reference. Do not edit by hand.",
+  "cases": [
+    {
+      "name": "short_tool_call__canonical",
+      "description": "3-field tool call, all short ASCII strings",
+      "input": {
+        "to": "client@example.com",
+        "subject": "Invoice ready",
+        "body": "Hello there"
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "body=Hello there\nsubject=Invoice ready\nto=client@example.com"
+    },
+    {
+      "name": "short_tool_call__generation",
+      "description": "3-field tool call, all short ASCII strings",
+      "input": {
+        "to": "client@example.com",
+        "subject": "Invoice ready",
+        "body": "Hello there"
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "body=Hello there\nsubject=Invoice ready\nto=client@example.com"
+    },
+    {
+      "name": "scalars_mixed__canonical",
+      "description": "All primitive types in one object",
+      "input": {
+        "str": "hello",
+        "num": 42,
+        "float": 3.14,
+        "neg": -17,
+        "bigish": 12345678901234,
+        "flag": true,
+        "off": false,
+        "nada": null
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "bigish=12345678901234\nflag=true\nfloat=3.14\nnada=null\nneg=-17\nnum=42\noff=false\nstr=hello"
+    },
+    {
+      "name": "scalars_mixed__generation",
+      "description": "All primitive types in one object",
+      "input": {
+        "str": "hello",
+        "num": 42,
+        "float": 3.14,
+        "neg": -17,
+        "bigish": 12345678901234,
+        "flag": true,
+        "off": false,
+        "nada": null
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "bigish=12345678901234\nflag=true\nfloat=3.14\nnada=null\nneg=-17\nnum=42\noff=false\nstr=hello"
+    },
+    {
+      "name": "nested_object__canonical",
+      "description": "2-level nesting via path mode",
+      "input": {
+        "user": {
+          "id": 123,
+          "name": "Egor",
+          "email": "e@example.com"
+        },
+        "tracking_id": "abc-123"
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "tracking_id=abc-123\nuser={email=e@example.com,id=123,name=Egor}"
+    },
+    {
+      "name": "nested_object__generation",
+      "description": "2-level nesting via path mode",
+      "input": {
+        "user": {
+          "id": 123,
+          "name": "Egor",
+          "email": "e@example.com"
+        },
+        "tracking_id": "abc-123"
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "tracking_id=abc-123\nuser.email=e@example.com\nuser.id=123\nuser.name=Egor"
+    },
+    {
+      "name": "array_of_objects__canonical",
+      "description": "Array of homogeneous objects",
+      "input": {
+        "items": [
+          {
+            "id": 1,
+            "name": "foo",
+            "qty": 2
+          },
+          {
+            "id": 2,
+            "name": "bar",
+            "qty": 5
+          },
+          {
+            "id": 3,
+            "name": "baz",
+            "qty": 1
+          }
+        ]
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "items::id,name,qty\nitems[0]=1,foo,2\nitems[1]=2,bar,5\nitems[2]=3,baz,1"
+    },
+    {
+      "name": "array_of_objects__generation",
+      "description": "Array of homogeneous objects",
+      "input": {
+        "items": [
+          {
+            "id": 1,
+            "name": "foo",
+            "qty": 2
+          },
+          {
+            "id": 2,
+            "name": "bar",
+            "qty": 5
+          },
+          {
+            "id": 3,
+            "name": "baz",
+            "qty": 1
+          }
+        ]
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "items::id,name,qty\nitems[0]=1,foo,2\nitems[1]=2,bar,5\nitems[2]=3,baz,1"
+    },
+    {
+      "name": "text_with_specials__canonical",
+      "description": "Strings containing quotes, braces, commas, equals",
+      "input": {
+        "title": "has \"quotes\" and {braces}",
+        "query": "a=1,b=2",
+        "slug": "name with spaces",
+        "emoji": "fire emoji 🔥 inline"
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "emoji=fire emoji 🔥 inline\nquery=a=1,b=2\nslug=name with spaces\ntitle=has \"quotes\" and {braces}"
+    },
+    {
+      "name": "text_with_specials__generation",
+      "description": "Strings containing quotes, braces, commas, equals",
+      "input": {
+        "title": "has \"quotes\" and {braces}",
+        "query": "a=1,b=2",
+        "slug": "name with spaces",
+        "emoji": "fire emoji 🔥 inline"
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "emoji=fire emoji 🔥 inline\nquery=a=1,b=2\nslug=name with spaces\ntitle=has \"quotes\" and {braces}"
+    },
+    {
+      "name": "multiline_body__canonical",
+      "description": "Multiline string requires nonce-bounded form",
+      "input": {
+        "to": "ops@example.com",
+        "subject": "Postmortem",
+        "body": "Hi,\n\nThe outage started at 14:02 and recovered at 14:37.\n\nRoot cause: a stale \"config_cache\" entry.\n\nThanks,\nEgor"
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "body=<<<\nHi,\n\nThe outage started at 14:02 and recovered at 14:37.\n\nRoot cause: a stale \"config_cache\" entry.\n\nThanks,\nEgor\n>>>\nsubject=Postmortem\nto=ops@example.com"
+    },
+    {
+      "name": "multiline_body__generation",
+      "description": "Multiline string requires nonce-bounded form",
+      "input": {
+        "to": "ops@example.com",
+        "subject": "Postmortem",
+        "body": "Hi,\n\nThe outage started at 14:02 and recovered at 14:37.\n\nRoot cause: a stale \"config_cache\" entry.\n\nThanks,\nEgor"
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "subject=Postmortem\nto=ops@example.com\nbody=<<<\nHi,\n\nThe outage started at 14:02 and recovered at 14:37.\n\nRoot cause: a stale \"config_cache\" entry.\n\nThanks,\nEgor\n>>>"
+    },
+    {
+      "name": "null_and_empties__canonical",
+      "description": "Sentinels for null, empty array, empty object",
+      "input": {
+        "scheduled_at": null,
+        "attachments": [],
+        "metadata": {},
+        "tags": [
+          "billing",
+          "urgent"
+        ]
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "attachments=[]\nmetadata={}\nscheduled_at=null\ntags=[\nbilling\nurgent\n]"
+    },
+    {
+      "name": "null_and_empties__generation",
+      "description": "Sentinels for null, empty array, empty object",
+      "input": {
+        "scheduled_at": null,
+        "attachments": [],
+        "metadata": {},
+        "tags": [
+          "billing",
+          "urgent"
+        ]
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "attachments=[]\nmetadata={}\nscheduled_at=null\ntags=[\nbilling\nurgent\n]"
+    },
+    {
+      "name": "pathological_keys__canonical",
+      "description": "Keys containing path-significant characters",
+      "input": {
+        "user.email": "literal-dot-in-key@example.com",
+        "items[0]": "literal-bracket-key",
+        "normal_key": "ordinary value"
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "<<<items[0]>>>=literal-bracket-key\nnormal_key=ordinary value\n<<<user.email>>>=literal-dot-in-key@example.com"
+    },
+    {
+      "name": "pathological_keys__generation",
+      "description": "Keys containing path-significant characters",
+      "input": {
+        "user.email": "literal-dot-in-key@example.com",
+        "items[0]": "literal-bracket-key",
+        "normal_key": "ordinary value"
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "<<<items[0]>>>=literal-bracket-key\nnormal_key=ordinary value\n<<<user.email>>>=literal-dot-in-key@example.com"
+    },
+    {
+      "name": "numeric_string_ambiguity__canonical",
+      "description": "String values that look like numbers/literals",
+      "input": {
+        "zipcode": "02134",
+        "version_tag": "true",
+        "placeholder": "null",
+        "actual_num": 42,
+        "actual_bool": true,
+        "actual_null": null
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "actual_bool=true\nactual_null=null\nactual_num=42\nplaceholder:s=null\nversion_tag:s=true\nzipcode=02134"
+    },
+    {
+      "name": "numeric_string_ambiguity__generation",
+      "description": "String values that look like numbers/literals",
+      "input": {
+        "zipcode": "02134",
+        "version_tag": "true",
+        "placeholder": "null",
+        "actual_num": 42,
+        "actual_bool": true,
+        "actual_null": null
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "actual_bool=true\nactual_null=null\nactual_num=42\nplaceholder:s=null\nversion_tag:s=true\nzipcode=02134"
+    },
+    {
+      "name": "deep_nesting__canonical",
+      "description": "Five-level nesting via path",
+      "input": {
+        "a": {
+          "b": {
+            "c": {
+              "d": {
+                "e": "deep"
+              }
+            }
+          }
+        }
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "a.b.c.d.e=deep"
+    },
+    {
+      "name": "deep_nesting__generation",
+      "description": "Five-level nesting via path",
+      "input": {
+        "a": {
+          "b": {
+            "c": {
+              "d": {
+                "e": "deep"
+              }
+            }
+          }
+        }
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "a.b.c.d.e=deep"
+    },
+    {
+      "name": "json_heavy__canonical",
+      "description": "Realistic API response shape",
+      "input": {
+        "status": "ok",
+        "code": 200,
+        "request_id": "req_abc123",
+        "data": {
+          "user": {
+            "id": 7,
+            "handle": "egor",
+            "verified": true
+          },
+          "posts": [
+            {
+              "id": 1,
+              "title": "First",
+              "likes": 12
+            },
+            {
+              "id": 2,
+              "title": "Second",
+              "likes": 5
+            }
+          ],
+          "meta": {
+            "next_cursor": null,
+            "has_more": false
+          }
+        }
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "code=200\ndata.meta={has_more=false,next_cursor=null}\ndata.posts=[\n{id=1,likes=12,title=First}\n{id=2,likes=5,title=Second}\n]\ndata.user={handle=egor,id=7,verified=true}\nrequest_id=req_abc123\nstatus=ok"
+    },
+    {
+      "name": "json_heavy__generation",
+      "description": "Realistic API response shape",
+      "input": {
+        "status": "ok",
+        "code": 200,
+        "request_id": "req_abc123",
+        "data": {
+          "user": {
+            "id": 7,
+            "handle": "egor",
+            "verified": true
+          },
+          "posts": [
+            {
+              "id": 1,
+              "title": "First",
+              "likes": 12
+            },
+            {
+              "id": 2,
+              "title": "Second",
+              "likes": 5
+            }
+          ],
+          "meta": {
+            "next_cursor": null,
+            "has_more": false
+          }
+        }
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "code=200\ndata.meta.has_more=false\ndata.meta.next_cursor=null\ndata.user.handle=egor\ndata.user.id=7\ndata.user.verified=true\nrequest_id=req_abc123\nstatus=ok\ndata.posts::id,likes,title\ndata.posts[0]=1,12,First\ndata.posts[1]=2,5,Second"
+    },
+    {
+      "name": "large_table__canonical",
+      "description": "10-row homogeneous table — exercises table mode hard",
+      "input": {
+        "orders": [
+          {
+            "id": 1,
+            "customer": "Acme",
+            "total": 199.99,
+            "paid": true
+          },
+          {
+            "id": 2,
+            "customer": "Beta",
+            "total": 49,
+            "paid": false
+          },
+          {
+            "id": 3,
+            "customer": "Gamma",
+            "total": 1500,
+            "paid": true
+          },
+          {
+            "id": 4,
+            "customer": "Delta",
+            "total": 12.5,
+            "paid": true
+          },
+          {
+            "id": 5,
+            "customer": "Epsilon",
+            "total": 0,
+            "paid": false
+          },
+          {
+            "id": 6,
+            "customer": "Zeta",
+            "total": 999.99,
+            "paid": true
+          },
+          {
+            "id": 7,
+            "customer": "Eta",
+            "total": 75.25,
+            "paid": false
+          },
+          {
+            "id": 8,
+            "customer": "Theta",
+            "total": 3,
+            "paid": true
+          },
+          {
+            "id": 9,
+            "customer": "Iota",
+            "total": 250,
+            "paid": true
+          },
+          {
+            "id": 10,
+            "customer": "Kappa",
+            "total": 42.42,
+            "paid": false
+          }
+        ]
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "orders::customer,id,paid,total\norders[0]=Acme,1,true,199.99\norders[1]=Beta,2,false,49\norders[2]=Gamma,3,true,1500\norders[3]=Delta,4,true,12.5\norders[4]=Epsilon,5,false,0\norders[5]=Zeta,6,true,999.99\norders[6]=Eta,7,false,75.25\norders[7]=Theta,8,true,3\norders[8]=Iota,9,true,250\norders[9]=Kappa,10,false,42.42"
+    },
+    {
+      "name": "large_table__generation",
+      "description": "10-row homogeneous table — exercises table mode hard",
+      "input": {
+        "orders": [
+          {
+            "id": 1,
+            "customer": "Acme",
+            "total": 199.99,
+            "paid": true
+          },
+          {
+            "id": 2,
+            "customer": "Beta",
+            "total": 49,
+            "paid": false
+          },
+          {
+            "id": 3,
+            "customer": "Gamma",
+            "total": 1500,
+            "paid": true
+          },
+          {
+            "id": 4,
+            "customer": "Delta",
+            "total": 12.5,
+            "paid": true
+          },
+          {
+            "id": 5,
+            "customer": "Epsilon",
+            "total": 0,
+            "paid": false
+          },
+          {
+            "id": 6,
+            "customer": "Zeta",
+            "total": 999.99,
+            "paid": true
+          },
+          {
+            "id": 7,
+            "customer": "Eta",
+            "total": 75.25,
+            "paid": false
+          },
+          {
+            "id": 8,
+            "customer": "Theta",
+            "total": 3,
+            "paid": true
+          },
+          {
+            "id": 9,
+            "customer": "Iota",
+            "total": 250,
+            "paid": true
+          },
+          {
+            "id": 10,
+            "customer": "Kappa",
+            "total": 42.42,
+            "paid": false
+          }
+        ]
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "orders::customer,id,paid,total\norders[0]=Acme,1,true,199.99\norders[1]=Beta,2,false,49\norders[2]=Gamma,3,true,1500\norders[3]=Delta,4,true,12.5\norders[4]=Epsilon,5,false,0\norders[5]=Zeta,6,true,999.99\norders[6]=Eta,7,false,75.25\norders[7]=Theta,8,true,3\norders[8]=Iota,9,true,250\norders[9]=Kappa,10,false,42.42"
+    },
+    {
+      "name": "heterogeneous_array__canonical",
+      "description": "Array of objects with different key sets — must fall back to path mode",
+      "input": {
+        "mixed": [
+          {
+            "kind": "user",
+            "name": "alice"
+          },
+          {
+            "kind": "group",
+            "members": 5
+          },
+          {
+            "kind": "user",
+            "name": "bob",
+            "role": "admin"
+          }
+        ]
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "mixed=[\n{kind=user,name=alice}\n{kind=group,members=5}\n{kind=user,name=bob,role=admin}\n]"
+    },
+    {
+      "name": "heterogeneous_array__generation",
+      "description": "Array of objects with different key sets — must fall back to path mode",
+      "input": {
+        "mixed": [
+          {
+            "kind": "user",
+            "name": "alice"
+          },
+          {
+            "kind": "group",
+            "members": 5
+          },
+          {
+            "kind": "user",
+            "name": "bob",
+            "role": "admin"
+          }
+        ]
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "mixed=[\n{kind=user,name=alice}\n{kind=group,members=5}\n{kind=user,name=bob,role=admin}\n]"
+    },
+    {
+      "name": "literal_strings__canonical",
+      "description": "String values that literally equal '[]', '{}', or contain commas/braces",
+      "input": {
+        "empty_brackets": "[]",
+        "empty_braces": "{}",
+        "csv_chunk": "a,b,c",
+        "braced": "{not an object}",
+        "bracketed": "[not an array]",
+        "keyish": "key:value"
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "braced={not an object}\nbracketed=[not an array]\ncsv_chunk=a,b,c\nempty_braces:s={}\nempty_brackets:s=[]\nkeyish=key:value"
+    },
+    {
+      "name": "literal_strings__generation",
+      "description": "String values that literally equal '[]', '{}', or contain commas/braces",
+      "input": {
+        "empty_brackets": "[]",
+        "empty_braces": "{}",
+        "csv_chunk": "a,b,c",
+        "braced": "{not an object}",
+        "bracketed": "[not an array]",
+        "keyish": "key:value"
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "braced={not an object}\nbracketed=[not an array]\ncsv_chunk=a,b,c\nempty_braces:s={}\nempty_brackets:s=[]\nkeyish=key:value"
+    },
+    {
+      "name": "wide_heterogeneous_array__canonical",
+      "description": "5-element array, mixed key sets — exercises inline-object mode hard",
+      "input": {
+        "events": [
+          {
+            "type": "click",
+            "target": "button#submit",
+            "at": 1715600000
+          },
+          {
+            "type": "view",
+            "page": "/pricing",
+            "at": 1715600045
+          },
+          {
+            "type": "click",
+            "target": "a.cta",
+            "at": 1715600101
+          },
+          {
+            "type": "submit",
+            "form": "checkout",
+            "value": 4999,
+            "at": 1715600145
+          },
+          {
+            "type": "view",
+            "page": "/thanks",
+            "referrer": "/checkout",
+            "at": 1715600200
+          }
+        ]
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "events=[\n{at=1715600000,target=button#submit,type=click}\n{at=1715600045,page=/pricing,type=view}\n{at=1715600101,target=a.cta,type=click}\n{at=1715600145,form=checkout,type=submit,value=4999}\n{at=1715600200,page=/thanks,referrer=/checkout,type=view}\n]"
+    },
+    {
+      "name": "wide_heterogeneous_array__generation",
+      "description": "5-element array, mixed key sets — exercises inline-object mode hard",
+      "input": {
+        "events": [
+          {
+            "type": "click",
+            "target": "button#submit",
+            "at": 1715600000
+          },
+          {
+            "type": "view",
+            "page": "/pricing",
+            "at": 1715600045
+          },
+          {
+            "type": "click",
+            "target": "a.cta",
+            "at": 1715600101
+          },
+          {
+            "type": "submit",
+            "form": "checkout",
+            "value": 4999,
+            "at": 1715600145
+          },
+          {
+            "type": "view",
+            "page": "/thanks",
+            "referrer": "/checkout",
+            "at": 1715600200
+          }
+        ]
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "events=[\n{at=1715600000,target=button#submit,type=click}\n{at=1715600045,page=/pricing,type=view}\n{at=1715600101,target=a.cta,type=click}\n{at=1715600145,form=checkout,type=submit,value=4999}\n{at=1715600200,page=/thanks,referrer=/checkout,type=view}\n]"
+    },
+    {
+      "name": "flat_inline_object__canonical",
+      "description": "Wide-but-flat nested object — exercises inline-object form for non-array nesting",
+      "input": {
+        "response": {
+          "user_id": 7,
+          "handle": "egor",
+          "verified": true,
+          "plan": "pro",
+          "seats": 12,
+          "renewed_at": "2026-04-01"
+        }
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "response={handle=egor,plan=pro,renewed_at=2026-04-01,seats=12,user_id=7,verified=true}"
+    },
+    {
+      "name": "flat_inline_object__generation",
+      "description": "Wide-but-flat nested object — exercises inline-object form for non-array nesting",
+      "input": {
+        "response": {
+          "user_id": 7,
+          "handle": "egor",
+          "verified": true,
+          "plan": "pro",
+          "seats": 12,
+          "renewed_at": "2026-04-01"
+        }
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "response.handle=egor\nresponse.plan=pro\nresponse.renewed_at=2026-04-01\nresponse.seats=12\nresponse.user_id=7\nresponse.verified=true"
+    },
+    {
+      "name": "deep_array_literal__canonical",
+      "description": "Array at a deep path — array-literal form (ADR-0013) shares the long prefix once",
+      "input": {
+        "data": {
+          "session": {
+            "actions": [
+              {
+                "type": "click",
+                "target": "button#submit"
+              },
+              {
+                "type": "view",
+                "page": "/pricing"
+              },
+              {
+                "type": "click",
+                "target": "a.cta"
+              },
+              {
+                "type": "scroll",
+                "depth": 80
+              },
+              {
+                "type": "view",
+                "page": "/thanks"
+              }
+            ]
+          }
+        }
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "data.session.actions=[\n{target=button#submit,type=click}\n{page=/pricing,type=view}\n{target=a.cta,type=click}\n{depth=80,type=scroll}\n{page=/thanks,type=view}\n]"
+    },
+    {
+      "name": "deep_array_literal__generation",
+      "description": "Array at a deep path — array-literal form (ADR-0013) shares the long prefix once",
+      "input": {
+        "data": {
+          "session": {
+            "actions": [
+              {
+                "type": "click",
+                "target": "button#submit"
+              },
+              {
+                "type": "view",
+                "page": "/pricing"
+              },
+              {
+                "type": "click",
+                "target": "a.cta"
+              },
+              {
+                "type": "scroll",
+                "depth": 80
+              },
+              {
+                "type": "view",
+                "page": "/thanks"
+              }
+            ]
+          }
+        }
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "data.session.actions=[\n{target=button#submit,type=click}\n{page=/pricing,type=view}\n{target=a.cta,type=click}\n{depth=80,type=scroll}\n{page=/thanks,type=view}\n]"
+    },
+    {
+      "name": "long_primitive_array__canonical",
+      "description": "Long array of primitives — array-literal shines vs `prefix[N]=value` per row",
+      "input": {
+        "timestamps": [
+          1715600000,
+          1715600015,
+          1715600030,
+          1715600045,
+          1715600060,
+          1715600075,
+          1715600090,
+          1715600105,
+          1715600120,
+          1715600135
+        ]
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "timestamps=[\n1715600000\n1715600015\n1715600030\n1715600045\n1715600060\n1715600075\n1715600090\n1715600105\n1715600120\n1715600135\n]"
+    },
+    {
+      "name": "long_primitive_array__generation",
+      "description": "Long array of primitives — array-literal shines vs `prefix[N]=value` per row",
+      "input": {
+        "timestamps": [
+          1715600000,
+          1715600015,
+          1715600030,
+          1715600045,
+          1715600060,
+          1715600075,
+          1715600090,
+          1715600105,
+          1715600120,
+          1715600135
+        ]
+      },
+      "opts": {
+        "profile": "generation"
+      },
+      "expected": "timestamps=[\n1715600000\n1715600015\n1715600030\n1715600045\n1715600060\n1715600075\n1715600090\n1715600105\n1715600120\n1715600135\n]"
+    },
+    {
+      "name": "utf8_byte_order_keys__canonical",
+      "description": "canonical key order is UTF-8 byte order (astral after U+FFFD)",
+      "input": {
+        "😀": 1,
+        "�": 2
+      },
+      "opts": {
+        "profile": "canonical"
+      },
+      "expected": "�=2\n😀=1"
+    }
+  ]
+}

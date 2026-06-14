@@ -17,7 +17,7 @@ If any criterion is missed, iterate the recipe (DPO addition, adversarial-focus 
 
 ## 2. Repo layout
 
-Keep the training workstream out of `prototype/`. New layout:
+Keep the training workstream out of the `raif-standard` monorepo. `raif-lora` is a separate repo. Layout:
 
 ```
 raif-lora/                           ← new repo, sibling of raif-standard/
@@ -27,7 +27,7 @@ raif-lora/                           ← new repo, sibling of raif-standard/
 │   ├── dataset.py                   ← synthetic-from-corpus generator
 │   ├── train.py                     ← SFT entry point (axolotl or unsloth)
 │   ├── train_dpo.py                 ← optional DPO pass
-│   ├── eval.py                      ← held-out eval, reads from prototype harness
+│   ├── eval.py                      ← held-out eval (uses the `raif` PyPI package directly)
 │   └── publish.py                   ← push to HuggingFace
 ├── configs/
 │   ├── llama-3-3b-sft.yaml          ← axolotl/unsloth training config
@@ -43,13 +43,13 @@ raif-lora/                           ← new repo, sibling of raif-standard/
 └── adapters/                        ← gitignored; LoRA outputs land here
 ```
 
-`raif-standard/prototype/` stays focused on encoder/decoder/harness. The new `raif-lora/` repo imports the canonical encoder (via `npm link` or `pip install -e ../raif-standard/prototype` once a Python wrapper exists, or by shelling out to `bun encode`).
+The `raif-standard` monorepo stays focused on the encoder/decoder packages, conformance corpus, and bench harness (`packages/js`, `packages/py`, `conformance/`). The `raif-lora/` repo depends on the published **`raif` PyPI package** (`pip install raif` / `uv add raif`) and imports `encode` / `decode` / `fix` / `validate` directly — the Python implementation now exists (full surface, stdlib-only, no `bun` at runtime), so there is no shelling out to `bun` and no `-e` install against the monorepo. (Today `raif-lora` still ships its own decoder; depending on the published package is the intended direction.)
 
 ## 3. Dataset construction
 
 ### 3.1 Synthetic-from-corpus pipeline
 
-Each of the 18 corpus shapes in `prototype/src/corpus.ts` becomes a *template*. The dataset generator produces N variations per template by varying:
+Each corpus shape in `packages/js/bench/corpus.ts` (the TS reference's dev corpus) becomes a *template*. The dataset generator produces N variations per template by varying:
 
 - Field names (rotate from a pool of ~200 realistic identifiers: `user_id`, `created_at`, `payload`, …).
 - String values (pool of ~500 realistic short strings + a few realistic long strings).
@@ -60,7 +60,7 @@ Each of the 18 corpus shapes in `prototype/src/corpus.ts` becomes a *template*. 
 For each variation:
 
 1. Generate the source JSON.
-2. Call `bun encode` (or the canonical encoder library) to produce the canonical RAIF.
+2. Call `raif.encode(...)` from the `raif` PyPI package to produce the canonical RAIF (no `bun` in the loop).
 3. Wrap into a chat-template message pair:
 
 ```json
@@ -203,7 +203,7 @@ Most projects of this scope converge in SFT alone; DPO is only needed if 3B is s
 
 ### 5.1 Extend the harness
 
-Add `--lora <adapter-path-or-hf-id>` flag to `prototype/src/harness.ts`. When set:
+Add a `--lora <adapter-path-or-hf-id>` flag to the bench harness (`packages/js/bench/harness.ts`), or run the equivalent eval from `raif-lora` using the `raif` PyPI package directly. When set:
 
 - Provider must be `ollama` or a `local` mode (use llama.cpp / vLLM with the adapter applied).
 - Prompts skip the spec block and few-shot examples — pass only the request + optional `<schema>` declaration.
@@ -262,7 +262,7 @@ value           ::= bare-value | wrapped-value | multiline-value | inline-object
 …
 ```
 
-(Full grammar derived from `prototype/src/raif.ts` parser; ~80 lines.)
+(Full grammar derived from the `packages/js/src/raif.ts` parser; ~80 lines.)
 
 Test: every shape in the corpus, when emitted by the encoder, must be accepted by the grammar. Add a lint command:
 
@@ -320,7 +320,7 @@ Apache-2.0 (matches Llama-3 license terms; verify before redistribution).
 
 1. **Set up `raif-lora/` repo** — bootstrap pyproject, axolotl install, GPU acquisition.
 2. **Build `src/dataset.py`** — produces deterministic `data/train.jsonl` and `data/eval.jsonl` from the corpus. Commit the generator; gitignore the outputs.
-3. **Add `--lora` flag to `prototype/src/harness.ts`** — same change can land before training; lets the harness be tested with the base model first.
+3. **Add `--lora` flag to the bench harness (`packages/js/bench/harness.ts`)** — same change can land before training; lets the harness be tested with the base model first.
 4. **Train SFT adapter** — `python src/train.py configs/llama-3-3b-sft.yaml`. ~3-5 hr on A100.
 5. **Eval SFT adapter** — `bun harness --provider local --lora ./adapters/…`. Gate check.
 6. **(If needed) Train DPO adapter** — only if SFT misses the gate.
@@ -355,7 +355,7 @@ The fine-tune workstream ships when ALL of these are true:
 - [ ] `raif.gbnf` + `raif.xgrammar` published, lint test passes against the corpus.
 - [ ] `HANDOFF.md` v0.5 status row added.
 - [ ] `docs/raif_v0.5_spec.md` published, supersedes v0.3 spec.
-- [ ] `prototype/src/harness.ts` `--lora` flag merged and documented in `prototype/README.md`.
+- [ ] Bench harness (`packages/js/bench/harness.ts`) `--lora` flag merged and documented in `packages/js/README.md`.
 - [ ] A v0.5 retrospective ADR (next number 0018) capturing what worked, what didn't, residual gaps.
 
 Until all six are checked, v0.5 is in progress, not shipped.
