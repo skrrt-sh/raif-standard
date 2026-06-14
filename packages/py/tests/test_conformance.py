@@ -57,7 +57,7 @@ ENCODE_CASES = _load("encode")
 def test_encode(case: dict):
     opts = case.get("opts") or {}
     if case.get("error"):
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
             encode(case["input"], opts)
         return
     result = encode(case["input"], opts)

@@ -575,15 +575,32 @@ def _order_for_generation(units: list[str]) -> list[str]:
     return [u for _, _, u in indexed]
 
 
+def _check_string_keys(value: Any, path: str = "<root>") -> None:
+    """A JSON object has string keys. JS object keys are always strings, so the
+    TS reference never encounters non-string keys; in Python a dict may. Reject
+    them up front with a stable ValueError instead of letting key operations
+    fail later with a raw TypeError."""
+    if isinstance(value, dict):
+        for k, v in value.items():
+            if not isinstance(k, str):
+                raise ValueError(f"RAIF object keys must be strings at {path}: {k!r}")
+            _check_string_keys(v, k if path == "<root>" else f"{path}.{k}")
+    elif isinstance(value, list):
+        for i, item in enumerate(value):
+            _check_string_keys(item, f"{path}[{i}]")
+
+
 def encode(obj: dict, opts: EncodeOptions | None = None) -> str:
     """Encode a JSON object to canonical (or generation-profile) RAIF.
 
-    `obj` must be a dict (RAIF requires a JSON object at top level). `opts` is
-    an optional dict: `{"profile": "canonical"|"generation", "markers": bool}`.
+    `obj` must be a dict with string keys (RAIF requires a JSON object at top
+    level). `opts` is an optional dict:
+    `{"profile": "canonical"|"generation", "markers": bool}`.
     Output is byte-identical to the canonical TypeScript `encode`.
     """
     if obj is None or not isinstance(obj, dict) or isinstance(obj, list):
         raise ValueError("RAIF requires a JSON object at top level")
+    _check_string_keys(obj)
     opts = opts or {}
     profile = opts.get("profile") or "canonical"
     leaves: list[str] = []

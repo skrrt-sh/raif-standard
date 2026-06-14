@@ -41,22 +41,32 @@ def run_bridge(script: str, payload, timeout: float) -> list:
     """Run `bun -e <script>` against `payload` (written to a temp file the script
     reads via `RAIF_BRIDGE_INPUT`) and return the JSON list it writes to stdout.
 
-    Raises RuntimeError if bun exits non-zero (stderr is surfaced, truncated)."""
+    All failure paths (non-zero exit, timeout, invalid/non-list output) raise
+    RuntimeError, so callers see one stable failure type."""
     fd, tmp = tempfile.mkstemp(suffix=".json", prefix="raif_bun_")
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(payload, f)
-        res = subprocess.run(
-            ["bun", "-e", script],
-            capture_output=True,
-            cwd=RAIF_JS_DIR,
-            timeout=timeout,
-            env={**os.environ, INPUT_ENV: tmp},
-        )
+        try:
+            res = subprocess.run(
+                ["bun", "-e", script],
+                capture_output=True,
+                cwd=RAIF_JS_DIR,
+                timeout=timeout,
+                env={**os.environ, INPUT_ENV: tmp},
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(f"bun bridge timed out after {timeout}s") from exc
     finally:
         os.unlink(tmp)
     if res.returncode != 0:
         raise RuntimeError(
             f"bun bridge failed: {res.stderr.decode('utf-8', 'replace')[:1000]}"
         )
-    return json.loads(res.stdout.decode("utf-8"))
+    try:
+        out = json.loads(res.stdout.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("bun bridge returned invalid JSON") from exc
+    if not isinstance(out, list):
+        raise RuntimeError("bun bridge must return a JSON list")
+    return out

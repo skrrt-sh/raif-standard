@@ -12,7 +12,6 @@ from __future__ import annotations
 from typing import Any
 
 from .decode import (
-    RaifError,
     _assemble,
     _check_encodable,
     _parse_leaves,
@@ -46,7 +45,8 @@ def fix(input: str, schema: Any | None = None) -> dict:
     try:
         out = _fix_internal(input, repairs, _to_schema(schema))
         return {"ok": True, "canonical": out["canonical"], "repairs": repairs}
-    except (RaifError, ValueError) as e:
-        # Mirror the TS blanket catch: any decode/encode failure is an
-        # unrepairable input, reported with the repairs attempted so far.
+    except Exception as e:  # noqa: BLE001 - intentional blanket catch
+        # Mirror the TS blanket catch: any decode/encode failure (RaifError,
+        # ValueError, TypeError, …) is an unrepairable input, reported with the
+        # repairs attempted so far. fix() must never raise.
         return {"ok": False, "error": str(e), "repairs": repairs}

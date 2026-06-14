@@ -195,3 +195,14 @@ def test_key_with_structural_char_is_wrapped():
 def test_key_with_delimiter_rejected():
     with pytest.raises(ValueError):
         encode({"a<<<b": 1})
+
+
+def test_non_string_keys_rejected_with_value_error():
+    # JSON objects have string keys; a dict with non-string keys is rejected
+    # with a stable ValueError (not a raw TypeError), at any nesting depth.
+    with pytest.raises(ValueError):
+        encode({1: "a"})
+    with pytest.raises(ValueError):
+        encode({"nested": {2: "b"}})
+    with pytest.raises(ValueError):
+        encode({"arr": [{3: "c"}]})
