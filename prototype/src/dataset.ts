@@ -68,7 +68,7 @@ interface Args {
 //   multiline `<<<…>>>` block   held: multiline_body      → train: record_with_note
 //   `<<<key>>>` key wrapping     held: pathological_keys    → train: dotted_paths
 //   bracket array under nesting  held: deep_array_literal   → train: nested_event_log
-//   homogeneous table form       held: large_table          → train: array_of_objects, large_table's bracket form is shared
+//   homogeneous table form       held: large_table          → train: tabular_report (variable col/row count)
 //   flat nested object           held: flat_inline_object   → train: nested_object (same path form under "generation")
 export const DEFAULT_HOLDOUT_SHAPES = [
   "multiline_body",
@@ -715,6 +715,45 @@ const variators: Record<string, Variator> = {
       description: "Compose a nested object containing a heterogeneous event array.",
     };
   },
+
+  // Carrier for the homogeneous-table `key::col,col` / `key[i]=v,v` form
+  // (held-out twin: large_table). The table mechanism was ASSUMED covered by
+  // array_of_objects "sharing the bracket form", but that never taught the
+  // header→row column-count discipline in-distribution — the 0.5B regressed to
+  // wrong cell counts on the held-out large_table. This teaches it directly on a
+  // DIFFERENT surface: VARIABLE column count (3-6, wider in adversarial) and row
+  // count, mixed per-column types incl. sparse null cells, so the arity rule
+  // generalizes rather than memorizing large_table's fixed 4-column form.
+  tabular_report: (r, mode) => {
+    const nCols = mode === "adversarial" ? intIn(r, 5, 7) : intIn(r, 3, 6);
+    const n = mode === "adversarial" ? intIn(r, 10, 18) : intIn(r, 4, 12);
+    const fields = pickFieldNames(r, nCols + 1);
+    const arrF = fields[0]!;
+    const colFs = fields.slice(1);
+    // Fix a type per column so every row shares an identical key set (required
+    // for the encoder's table form); "opt" columns emit sparse null cells.
+    const colTypes = colFs.map((_, j) =>
+      j === 0 ? "id" : pick(r, ["s", "n", "f", "b", "opt"]));
+    const rows: JSONObject[] = [];
+    for (let i = 0; i < n; i++) {
+      const row: JSONObject = {};
+      colFs.forEach((f, j) => {
+        switch (colTypes[j]) {
+          case "id": row[f!] = i + 1; break;
+          case "s": row[f!] = makeShortString(r); break;
+          case "n": row[f!] = intIn(r, 0, 9999); break;
+          case "f": row[f!] = Math.round(r() * 100000) / 100; break;
+          case "b": row[f!] = chance(r, 0.5); break;
+          default: row[f!] = chance(r, 0.65) ? makeShortString(r) : null; // sparse
+        }
+      });
+      rows.push(row);
+    }
+    return {
+      json: { [arrF]: rows },
+      description: `Compose a ${n}-row report table with ${nCols} columns.`,
+    };
+  },
 };
 
 const HARD_SHAPES = new Set([
@@ -723,7 +762,7 @@ const HARD_SHAPES = new Set([
   // In-training mechanism carriers — their adversarial mode is what teaches the
   // hard branch of each mechanism (nonce-bounded blocks, multi-wrapped keys,
   // deeper/wider nested arrays).
-  "record_with_note", "dotted_paths", "nested_event_log",
+  "record_with_note", "dotted_paths", "nested_event_log", "tabular_report",
 ]);
 
 // ─── Schema declaration ──────────────────────────────────────────────────
