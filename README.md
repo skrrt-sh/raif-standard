@@ -31,7 +31,7 @@ value-first, and built so that the common failure modes of generated output are
 recoverable by construction.
 
 ```ts
-import { encode, decode } from "@skrrt-sh/raif";
+import { encode, decode } from "raif-format";
 
 encode({ user: { name: "Ada", email: "ada@x.io" }, active: true });
 // active=true
@@ -101,8 +101,8 @@ encoder. Both are dependency-light (zero runtime dependencies in the core path).
 
 | Language | Package | Source | Surface |
 |---|---|---|---|
-| TypeScript (reference) | [`@skrrt-sh/raif`](https://www.npmjs.com/package/@skrrt-sh/raif) on npm | [`packages/js`](packages/js) | `encode` · `decode` · `decodeLenient` · `fix` · `validate` |
-| Python | [`raif`](https://pypi.org/project/raif/) on PyPI | [`packages/py`](packages/py) | `encode` · `decode` · `decode_lenient` · `fix` · `validate` |
+| TypeScript (reference) | [`raif-format`](https://www.npmjs.com/package/raif-format) on npm | [`packages/js`](packages/js) | `encode` · `decode` · `decodeLenient` · `fix` · `validate` |
+| Python | [`raif-format`](https://pypi.org/project/raif-format/) on PyPI | [`packages/py`](packages/py) | `encode` · `decode` · `decode_lenient` · `fix` · `validate` |
 
 ```py
 from raif import encode, decode
