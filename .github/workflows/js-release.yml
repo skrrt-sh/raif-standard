@@ -4,19 +4,22 @@ name: JS Release
 # publishing (provenance auto-on; no long-lived NPM_TOKEN).
 #
 # ── ONE-TIME MANUAL SETUP (required before this workflow can publish) ──────────
-#   1. Register the trusted publisher at npmjs.com for the `raif` package:
-#        Package: raif
+#   1. Register the trusted publisher at npmjs.com for the `@skrrt-sh/raif`
+#      package:
+#        Package: @skrrt-sh/raif
 #        Repository: skrrt-sh/raif-standard
 #        Workflow filename: js-release.yml
 #        Environment: npm-publish
 #      (npmjs.com → package settings → "Trusted Publisher" → GitHub Actions.)
+#      The unscoped name `raif` is blocked by npm's name-similarity filter, so
+#      the package is published under the `@skrrt-sh` org scope (public access).
 #   2. Create the `npm-publish` GitHub Environment on the repo (Settings →
 #      Environments) and add any desired protection rules / reviewers.
 #   3. FIRST PUBLISH OF A BRAND-NEW NAME: npm cannot attach a trusted publisher
-#      to a package that does not yet exist. The very first `raif@x.y.z` may need
-#      a one-time manual/token publish (`npm publish --access public --provenance`
-#      from a maintainer machine) to create the package; OIDC handles every
-#      release after that.
+#      to a package that does not yet exist. The very first `@skrrt-sh/raif@x.y.z`
+#      needs a one-time manual publish (`npm publish --access public
+#      --provenance=false` from a maintainer machine) to create the package; OIDC
+#      handles every release after that.
 # ──────────────────────────────────────────────────────────────────────────────
 
 on:
