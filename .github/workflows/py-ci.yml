@@ -1,0 +1,76 @@
+name: Py CI
+
+# Lint, format-check, and test for the Python `raif` package across all
+# supported interpreters. Path-filtered to packages/py so unrelated changes
+# (e.g. the JS package) don't trigger this pipeline. No `bun`: the conformance
+# corpus is the parity gate; the differential test skips cleanly without bun.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/py/**"
+      - "conformance/**"
+      - ".github/workflows/py-ci.yml"
+  pull_request:
+    paths:
+      - "packages/py/**"
+      - "conformance/**"
+      - ".github/workflows/py-ci.yml"
+
+# Default-deny at the top level. The single job re-grants only read access.
+permissions:
+  contents: read
+
+concurrency:
+  group: py-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: packages/py
+
+jobs:
+  test:
+    name: Lint, format & test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Harden runner
+        # pin to SHA
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        # pin to SHA
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup uv
+        # pin to SHA
+        uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6.4.3
+        with:
+          version: "0.11.14"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen --python ${{ matrix.python-version }}
+
+      - name: Lint (ruff)
+        run: uv run ruff check
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check
+
+      - name: Test (pytest)
+        # The differential-vs-TS test skips cleanly without bun; the conformance
+        # corpus is the required parity gate and needs no bun.
+        run: uv run pytest
