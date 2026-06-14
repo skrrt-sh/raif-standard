@@ -115,7 +115,7 @@ jobs:
 
       - name: Publish to TestPyPI
         # pin to SHA — Trusted Publishing: no username/password.
-        uses: pypa/gh-action-pypi-publish@7f25271a4aa483500f742f9492b2ab5648d61011 # v1.12.4
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: packages/py/dist/
@@ -148,6 +148,6 @@ jobs:
       - name: Publish to PyPI
         # pin to SHA — Trusted Publishing: no username/password. PEP 740
         # attestations are generated and attached automatically under OIDC.
-        uses: pypa/gh-action-pypi-publish@7f25271a4aa483500f742f9492b2ab5648d61011 # v1.12.4
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
           packages-dir: packages/py/dist/
