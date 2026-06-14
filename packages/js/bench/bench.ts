@@ -1,7 +1,7 @@
 // Batch benchmark: round-trip fidelity + token count comparison.
 // Run with: bun run bench
 
-import { encode, decode } from "../src/raif.ts";
+import { encode, decode } from "../src/index.ts";
 import { corpus } from "./corpus.ts";
 import { deepEqual } from "./json_equal.ts";
 import { encode as bpeEncode } from "gpt-tokenizer";

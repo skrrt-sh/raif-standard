@@ -8,7 +8,15 @@ import { join } from "node:path";
 // Import through the package entry point (not raif.ts directly) so this suite
 // doubles as a guard on the published public surface: if `src/index.ts` ever
 // stops re-exporting one of these, the corpus run fails here.
-import { decode, decodeLenient, encode, fix, type JSONObject, validate } from "../src/index.ts";
+import {
+  decode,
+  decodeLenient,
+  encode,
+  fix,
+  type JSONObject,
+  parseSchema,
+  validate,
+} from "../src/index.ts";
 
 const CONFORMANCE_DIR = join(import.meta.dir, "../../../conformance");
 
@@ -160,4 +168,24 @@ describe("conformance: validate", () => {
       expect(r.ok).toBe(c.valid);
     });
   }
+});
+
+// ── parseSchema (public surface guard) ───────────────────────────────────────
+// The corpus passes schemas as strings; this guards the published parseSchema
+// export and that a parsed RaifSchema object is accepted by decode.
+describe("conformance: parseSchema", () => {
+  test("a parsed schema pins types in decode", () => {
+    const schema = parseSchema("priority:s\ncount:n");
+    const r = decode("count=2\npriority=2", schema);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toEqual({ count: 2, priority: "2" });
+  });
+
+  test("string and parsed schema decode identically", () => {
+    const decl = "tags[]:s";
+    const input = "tags[0]=1\ntags[1]=2";
+    const viaString = decode(input, decl);
+    const viaParsed = decode(input, parseSchema(decl));
+    expect(viaString).toEqual(viaParsed);
+  });
 });

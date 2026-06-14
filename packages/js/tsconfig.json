@@ -10,5 +10,5 @@
     "types": ["bun"],
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "tsdown.config.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "bench/**/*.ts", "tsdown.config.ts"]
 }
