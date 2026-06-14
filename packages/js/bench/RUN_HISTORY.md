@@ -1,61 +1,13 @@
-# RAIF v0.2 Prototype
+# RAIF prototype — token-saving iteration log
 
-**Question this prototype answers:**
-
-> Does the spec at `../docs/raif_v0.2_spec.md` actually round-trip every shape of JSON object in our corpus, and does it actually save tokens compared to JSON?
-
-This is throwaway code. The keeper inside is `src/raif.ts` (the pure encoder + decoder); the TUI and benchmark shells are disposable scaffolding around it.
-
-## Setup
-
-```sh
-mise install      # bun 1.3.13
-bun install       # gpt-tokenizer + types
-```
-
-## Run
-
-```sh
-bun check    # round-trip sanity check across the corpus (fails fast)
-bun bench    # batch benchmark: token counts JSON vs RAIF, round-trip + idempotence
-bun tui      # interactive browser: pick a corpus entry, see RAIF, see decoded JSON
-bun harness  # LLM harness: ask a local Ollama model to re-emit each corpus shape
-             # as both RAIF and JSON; score parse / fidelity / repair / tokens.
-             # Requires: `ollama serve` running and the requested model pulled.
-             # Defaults: qwen2.5:1.5b, 3 trials/shape, concurrency 3.
-             # Flags: --model NAME  --trials N  --concurrency N
-             #        --shapes name1,name2  --url URL  --out DIR
-             # Raw outputs always saved to harness_runs/<ts>_<model>.json
-             # for offline re-scoring after repair-pass changes.
-```
-
-## Files
-
-- `src/raif.ts` — encoder + decoder (the keepers; pure functions)
-- `src/corpus.ts` — representative JSON objects (one per spec shape)
-- `src/bench.ts` — batch benchmark harness
-- `src/tui.ts` — interactive shell (throwaway)
-- `src/check.ts` — fail-fast smoke test for the corpus
-- `src/harness.ts` — LLM translation harness (Ollama; throwaway scaffolding)
-- `src/harness_prompts.ts` — RAIF / JSON few-shot templates for the harness
-- `harness_runs/` — raw JSON outputs from harness runs (re-scorable offline)
-
-## Out of scope for this prototype
-
-- **LLM-generated RAIF testing.** That's a Stage 2 experiment with a different shape — needs an actual model and a separate repair-robustness corpus.
-- **RAIF-R canonical form with checksums** (spec Section 9). Audit tier; not needed to validate round-trip claims.
-- **Schema validation.** Validates field constraints, not format correctness.
-- **Most of the syntax-repair pass** (spec Section 6). Implements only markdown-fence stripping and line-ending normalization; the rest can land if needed.
-
-## What we expect to see
-
-- **Round-trip ✓** for every corpus entry. A failure is a spec bug.
-- **Idempotence ✓** for every corpus entry (modulo random nonces — the bench normalizes them).
-- **Token delta** mostly negative (RAIF wins). Where it doesn't, that's interesting data — record which shapes lose and why.
+Historical run notes from the prototype phase that produced the encoder. These
+record how the cost-aware encoder converged to ~14% fewer tokens than JSON across
+the 18-shape corpus. Reproduce the current numbers with `bun run bench/bench.ts`
+(or `bun bench`).
 
 ## Notes / answers from sessions
 
-### Run 5 — 2026-05-16 (current — v0.3 + ADR-0013)
+### Run 5 — 2026-05-16 (v0.3 + ADR-0013)
 
 After adding the multi-line array literal form (`prefix=[\n…rows…\n]`) as a 4th candidate in the cost-aware selector:
 

@@ -22,7 +22,7 @@
 // Determinism: every arguments object is seeded from a hash of its canonical
 // JSON, so the same inputs always render the same examples.
 
-import { encode, decode, type JSONObject, type JSONValue } from "./raif.ts";
+import { encode, decode, type JSONObject, type JSONValue } from "../src/raif.ts";
 import { renderExample, makeRng, hashString, writeJsonl, type Example } from "./dataset.ts";
 
 const DATASET = "glaiveai/glaive-function-calling-v2";

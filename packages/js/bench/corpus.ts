@@ -1,7 +1,7 @@
 // A small corpus of representative JSON objects for the benchmark.
 // Each entry isolates one shape from the spec so a failure points at one rule.
 
-import type { JSONObject } from "./raif.ts";
+import type { JSONObject } from "../src/raif.ts";
 
 export interface CorpusEntry {
   name: string;

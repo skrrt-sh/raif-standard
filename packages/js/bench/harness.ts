@@ -16,7 +16,7 @@
 // without re-querying the model. The API key is NEVER written to disk.
 
 import { encode as bpeEncode } from "gpt-tokenizer";
-import { decode, type JSONObject } from "./raif.ts";
+import { decode, type JSONObject } from "../src/raif.ts";
 import { corpus } from "./corpus.ts";
 import { deepEqual } from "./json_equal.ts";
 import { buildPrompt } from "./harness_prompts.ts";

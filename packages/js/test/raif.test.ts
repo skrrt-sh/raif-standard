@@ -1,8 +1,8 @@
 // Property-style tests beyond corpus round-trip. Run with: bun test
 // Uses Bun's built-in test runner — no extra deps.
 
-import { test, expect, describe } from "bun:test";
-import { encode, decode, decodeLenient, fix, validate, type JSONObject } from "./raif.ts";
+import { describe, expect, test } from "bun:test";
+import { decode, decodeLenient, encode, fix, type JSONObject, validate } from "../src/raif.ts";
 
 function roundTrip(obj: JSONObject): JSONObject {
   const raif = encode(obj);
@@ -103,7 +103,11 @@ describe("encoder shape choices", () => {
     expect(out).toBe("s:s=abc>>>def");
     expect(decode(out)).toEqual({ ok: true, value: { s: "abc>>>def" }, repairs: [] });
     // The wrapped form remains accepted as input: outermost-slice unwrap.
-    expect(decode("s=<<<abc>>>def>>>")).toEqual({ ok: true, value: { s: "abc>>>def" }, repairs: [] });
+    expect(decode("s=<<<abc>>>def>>>")).toEqual({
+      ok: true,
+      value: { s: "abc>>>def" },
+      repairs: [],
+    });
   });
 
   test("multiline string where a line literally equals `>>>` uses nonce form", () => {
@@ -278,11 +282,7 @@ describe("inline-object form (ADR-0010)", () => {
 
   test("inline-object cell containing `}` wraps", () => {
     const original: JSONObject = {
-      mixed: [
-        { s: "weird }", id: 1 },
-        { s: "plain", extra: true },
-        { only: "{ also weird" },
-      ],
+      mixed: [{ s: "weird }", id: 1 }, { s: "plain", extra: true }, { only: "{ also weird" }],
     };
     const out = encode(original);
     expect(out).toContain("s=<<<weird }>>>");
@@ -291,11 +291,7 @@ describe("inline-object form (ADR-0010)", () => {
 
   test("inline-object cell containing `=` round-trips (parser locks key first)", () => {
     const original: JSONObject = {
-      mixed: [
-        { k: "a=b", more: 1 },
-        { k: "c=d", extra: true },
-        { only: "no equals" },
-      ],
+      mixed: [{ k: "a=b", more: 1 }, { k: "c=d", extra: true }, { only: "no equals" }],
     };
     expect(roundTrip(original)).toEqual(original);
   });
@@ -579,7 +575,8 @@ describe("TIER 2-A leading-zero number → string (ADR-0015)", () => {
 
 describe("TIER 2-B repeated-key auto-indexing (ADR-0015)", () => {
   test("repeated inline-object leaves become array elements", () => {
-    const raw = "mixed={kind=user,name=alice}\nmixed={kind=group,members=5}\nmixed={kind=user,name=bob,role=admin}";
+    const raw =
+      "mixed={kind=user,name=alice}\nmixed={kind=group,members=5}\nmixed={kind=user,name=bob,role=admin}";
     const r = decode(raw);
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -669,7 +666,8 @@ describe("TIER 2-C nested inline-object flattening (ADR-0015)", () => {
 
 describe("table null cells decode as JSON null (ADR-0018, supersedes TIER 2-D 'key absent')", () => {
   test("null cells are the JSON null value, exactly like a bare null literal", () => {
-    const raw = "mixed::kind,members,name,role\nmixed[0]=user,null,alice,null\nmixed[1]=group,5,null,null";
+    const raw =
+      "mixed::kind,members,name,role\nmixed[0]=user,null,alice,null\nmixed[1]=group,5,null,null";
     const r = decode(raw);
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -976,7 +974,7 @@ describe("hostile keys cannot pollute prototypes", () => {
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(Object.prototype.hasOwnProperty.call(r.value, "__proto__")).toBe(true);
+      expect(Object.hasOwn(r.value, "__proto__")).toBe(true);
       expect((r.value as Record<string, unknown>).polluted).toBeUndefined();
     }
   });
@@ -984,13 +982,16 @@ describe("hostile keys cannot pollute prototypes", () => {
   test("`__proto__` round-trips as a plain key", () => {
     const original: JSONObject = {};
     Object.defineProperty(original, "__proto__", {
-      value: 7, enumerable: true, writable: true, configurable: true,
+      value: 7,
+      enumerable: true,
+      writable: true,
+      configurable: true,
     });
     const out = encode(original);
     expect(out).toBe("__proto__=7");
     const r = decode(out);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(Object.prototype.hasOwnProperty.call(r.value, "__proto__")).toBe(true);
+    if (r.ok) expect(Object.hasOwn(r.value, "__proto__")).toBe(true);
   });
 
   test("`__proto__` inside an inline object stays an own property", () => {
@@ -998,7 +999,7 @@ describe("hostile keys cannot pollute prototypes", () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       const o = (r.value as { o: JSONObject }).o;
-      expect(Object.prototype.hasOwnProperty.call(o, "__proto__")).toBe(true);
+      expect(Object.hasOwn(o, "__proto__")).toBe(true);
       expect(o.x).toBe(2);
     }
   });
@@ -1009,7 +1010,8 @@ describe("seeded round-trip property (the fuzz net)", () => {
   function rng(seed: number): () => number {
     let a = seed >>> 0;
     return () => {
-      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
       let t = Math.imul(a ^ (a >>> 15), 1 | a);
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -1017,27 +1019,97 @@ describe("seeded round-trip property (the fuzz net)", () => {
   }
 
   const STRINGS = [
-    "", " ", "a", "hello world", "null", "true", "false", "42", "-0.5", "1e3",
-    "0123", "[]", "{}", "[", "]", "{", "}", "a,b", "a{b", "a}b", "{a=1}",
-    "{a=1,b=2}", "a=<<<", "x=[", "<", "<<", "<<<", "a>>>b", "<<<x>>>",
-    "line1\nline2", "a\rb", "a\r\nb", "x\r", ">>>", "a\n>>>\nb", "<<<\n",
-    ">>>4f2a", "café", "😀emoji", "�text", "a=b", "k:v", ":s=1", "12:30",
-    "foo=", "=bar", " lead", "trail ", "tab\there", "a=<x", "v=<<",
-    "<raif>", "</raif>", "<|raif_start|>", "a <raif> b",
+    "",
+    " ",
+    "a",
+    "hello world",
+    "null",
+    "true",
+    "false",
+    "42",
+    "-0.5",
+    "1e3",
+    "0123",
+    "[]",
+    "{}",
+    "[",
+    "]",
+    "{",
+    "}",
+    "a,b",
+    "a{b",
+    "a}b",
+    "{a=1}",
+    "{a=1,b=2}",
+    "a=<<<",
+    "x=[",
+    "<",
+    "<<",
+    "<<<",
+    "a>>>b",
+    "<<<x>>>",
+    "line1\nline2",
+    "a\rb",
+    "a\r\nb",
+    "x\r",
+    ">>>",
+    "a\n>>>\nb",
+    "<<<\n",
+    ">>>4f2a",
+    "café",
+    "😀emoji",
+    "�text",
+    "a=b",
+    "k:v",
+    ":s=1",
+    "12:30",
+    "foo=",
+    "=bar",
+    " lead",
+    "trail ",
+    "tab\there",
+    "a=<x",
+    "v=<<",
+    "<raif>",
+    "</raif>",
+    "<|raif_start|>",
+    "a <raif> b",
   ];
   const KEYS = [
-    "a", "b2", "key", "user.name", "items[0]", "with space", "café", "😀",
-    ".lead", "trail.", "a,b", "a=b", "a:b", "0", "00", "{a}", "[0]", "a.b.c",
-    "__proto__", "constructor", "a<b", "a>b",
+    "a",
+    "b2",
+    "key",
+    "user.name",
+    "items[0]",
+    "with space",
+    "café",
+    "😀",
+    ".lead",
+    "trail.",
+    "a,b",
+    "a=b",
+    "a:b",
+    "0",
+    "00",
+    "{a}",
+    "[0]",
+    "a.b.c",
+    "__proto__",
+    "constructor",
+    "a<b",
+    "a>b",
   ];
 
   function pick<T>(r: () => number, arr: T[]): T {
     return arr[Math.floor(r() * arr.length)]!;
   }
 
-  function genValue(r: () => number, depth: number): ReturnType<typeof genObject> | string | number | boolean | null | unknown[] {
+  function genValue(
+    r: () => number,
+    depth: number,
+  ): ReturnType<typeof genObject> | string | number | boolean | null | unknown[] {
     const roll = r();
-    if (roll < 0.30) return pick(r, STRINGS);
+    if (roll < 0.3) return pick(r, STRINGS);
     if (roll < 0.45) {
       const n = r();
       if (n < 0.25) return Math.floor(r() * 2000) - 1000;
@@ -1063,7 +1135,10 @@ describe("seeded round-trip property (the fuzz net)", () => {
     for (let i = 0; i < n; i++) {
       const k = pick(r, KEYS) + (r() < 0.3 ? String(Math.floor(r() * 10)) : "");
       Object.defineProperty(out, k, {
-        value: genValue(r, depth), enumerable: true, writable: true, configurable: true,
+        value: genValue(r, depth),
+        enumerable: true,
+        writable: true,
+        configurable: true,
       });
     }
     return out;
@@ -1117,7 +1192,9 @@ describe("seeded round-trip property (the fuzz net)", () => {
         throw new Error(`generation-profile round-trip failed\ngen:\n${gen}\n${ctx()}`);
       }
       if (gdec.repairs.some((rp) => rp.kind !== "mode_markers_stripped")) {
-        throw new Error(`unexpected repairs on generation output: ${JSON.stringify(gdec.repairs)}\n${ctx()}`);
+        throw new Error(
+          `unexpected repairs on generation output: ${JSON.stringify(gdec.repairs)}\n${ctx()}`,
+        );
       }
     }
   });
@@ -1277,7 +1354,12 @@ describe("generation profile: deterministic modes, truncation-optimal order", ()
   test("uniform object array always uses table mode (no cost comparison)", () => {
     // 2 short rows: canonical picks the cheaper array literal; generation
     // must still pick table — fixed precedence, learnable by a model.
-    const obj: JSONObject = { items: [{ id: 1, name: "a" }, { id: 2, name: "b" }] };
+    const obj: JSONObject = {
+      items: [
+        { id: 1, name: "a" },
+        { id: 2, name: "b" },
+      ],
+    };
     const gen = encode(obj, { profile: "generation" });
     expect(gen.startsWith("items::id,name\n")).toBe(true);
     expect(decode(gen)).toEqual({ ok: true, value: obj, repairs: [] });
@@ -1308,7 +1390,10 @@ describe("generation profile: deterministic modes, truncation-optimal order", ()
       metadata: { tracking_id: "abc-123", retry_count: 0 },
       scheduled_at: null,
       attachments: [],
-      mixed: [{ kind: "user", name: "alice" }, { kind: "group", members: 5 }],
+      mixed: [
+        { kind: "user", name: "alice" },
+        { kind: "group", members: 5 },
+      ],
     };
     const r = decode(encode(obj, { profile: "generation" }));
     expect(r.ok).toBe(true);
@@ -1376,7 +1461,10 @@ describe("schema `o` with declared children: typed where declared, open elsewher
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.value).toEqual({
-        mixed: [{ kind: "user", name: "alice" }, { kind: "group", members: 5 }],
+        mixed: [
+          { kind: "user", name: "alice" },
+          { kind: "group", members: 5 },
+        ],
       });
     }
   });
@@ -1385,5 +1473,26 @@ describe("schema `o` with declared children: typed where declared, open elsewher
     const r = decode("extra=[\n1\ntwo\n]", "extra:o?");
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value).toEqual({ extra: [1, "two"] });
+  });
+});
+
+describe("error & non-canonical surfaces", () => {
+  test("encode throws on a key containing the block delimiters", () => {
+    expect(() => encode({ "a<<<b": 1 })).toThrow(/<<< or >>>/);
+    expect(() => encode({ "x>>>y": 1 })).toThrow(/<<< or >>>/);
+  });
+
+  test("validate flags a parseable but non-canonically-ordered doc", () => {
+    // Keys out of canonical order: parses cleanly (no repairs) but differs
+    // from the canonical form, so validate rejects it.
+    const r = validate("b=2\na=1");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors[0]).toContain("differs from canonical");
+  });
+
+  test("fix reports failure on an unrepairable input rather than throwing", () => {
+    const r = fix("this is not raif at all !!!");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(typeof r.error).toBe("string");
   });
 });

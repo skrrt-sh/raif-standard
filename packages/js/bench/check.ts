@@ -1,7 +1,7 @@
 // Smoke test — sanity-check the encoder/decoder on every corpus entry.
 // Fails fast (exit 1) on the first broken round-trip. Run with: bun run check
 
-import { encode, decode } from "./raif.ts";
+import { encode, decode } from "../src/raif.ts";
 import { corpus } from "./corpus.ts";
 import { deepEqual } from "./json_equal.ts";
 

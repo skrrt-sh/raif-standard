@@ -8,7 +8,7 @@
 // events (transitions, keystrokes, errors, ticks) so a soundtrack can be
 // synthesized and muxed onto the recording. See src/gen_audio.ts.
 
-import { encode, decode, decodeLenient } from "./raif.ts";
+import { encode, decode, decodeLenient } from "../src/raif.ts";
 import { corpus } from "./corpus.ts";
 import { encode as cl100k } from "gpt-tokenizer/encoding/cl100k_base";
 import { writeFileSync } from "node:fs";

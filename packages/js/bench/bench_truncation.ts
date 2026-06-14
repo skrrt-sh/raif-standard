@@ -1,5 +1,5 @@
 import { corpus } from "./corpus.ts";
-import { encode, decodeLenient } from "./raif.ts";
+import { encode, decodeLenient } from "../src/raif.ts";
 import { jsonrepair } from "jsonrepair";
 import { encode as tok, decode as detok } from "gpt-tokenizer/encoding/cl100k_base";
 

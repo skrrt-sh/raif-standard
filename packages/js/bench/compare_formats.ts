@@ -1,5 +1,5 @@
 import { corpus } from "./corpus.ts";
-import { encode } from "./raif.ts";
+import { encode } from "../src/raif.ts";
 import { encode as toonEncode } from "@toon-format/toon";
 import { stringify as yamlStringify } from "yaml";
 import { encode as cl100k } from "gpt-tokenizer/encoding/cl100k_base";

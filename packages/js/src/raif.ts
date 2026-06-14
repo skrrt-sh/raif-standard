@@ -201,7 +201,12 @@ function walk(value: JSONValue, prefix: string, leaves: string[], profile: Encod
 // eligible, else array literal, else path. No cost comparison: a model can
 // learn a fixed rule; it cannot replicate a byte-cost optimizer. Multi-line
 // units are pushed pre-joined so ordering can treat them atomically.
-function emitArray(arr: JSONValue[], prefix: string, leaves: string[], profile: EncodeProfile): void {
+function emitArray(
+  arr: JSONValue[],
+  prefix: string,
+  leaves: string[],
+  profile: EncodeProfile,
+): void {
   if (profile === "generation") {
     const unit = asTable(arr, prefix) ?? asArrayLiteral(arr, prefix);
     if (unit) {
@@ -277,15 +282,19 @@ function encodeArrayLiteralElement(v: JSONValue): string {
   // Row position: a line literally `]` would close the array, and a line
   // literally `[` could be misread as an unterminated opener. Wrap both. Also
   // keep the standard literal/inline-object wrap rules.
-  const cell = encodePrimitiveCell(v, (s) =>
-    s.length === 0 ||
-    s.trim() !== s ||
-    s === "]" ||
-    s === "[" ||
-    s.startsWith(OPEN) ||
-    s === "[]" || s === "{}" ||
-    looksLikeLiteral(s) ||
-    looksLikeInlineObject(s));
+  const cell = encodePrimitiveCell(
+    v,
+    (s) =>
+      s.length === 0 ||
+      s.trim() !== s ||
+      s === "]" ||
+      s === "[" ||
+      s.startsWith(OPEN) ||
+      s === "[]" ||
+      s === "{}" ||
+      looksLikeLiteral(s) ||
+      looksLikeInlineObject(s),
+  );
   if (cell !== null) return cell;
   // Object: must be a flat inline-object per eligibility above.
   return encodeInlineObject(v as JSONObject);
@@ -299,7 +308,9 @@ function bytes(leaves: string[]): number {
 
 function asPath(arr: JSONValue[], prefix: string, profile: EncodeProfile): string[] {
   const out: string[] = [];
-  arr.forEach((item, i) => walk(item, `${prefix}[${i}]`, out, profile));
+  arr.forEach((item, i) => {
+    walk(item, `${prefix}[${i}]`, out, profile);
+  });
   return out;
 }
 
@@ -322,7 +333,13 @@ function asTable(arr: JSONValue[], prefix: string): string[] | null {
     }
   }
   for (const c of cols) {
-    if (c.includes(",") || c.includes(OPEN) || c.includes(CLOSE) || c.includes("=") || c.includes(":")) {
+    if (
+      c.includes(",") ||
+      c.includes(OPEN) ||
+      c.includes(CLOSE) ||
+      c.includes("=") ||
+      c.includes(":")
+    ) {
       return null;
     }
   }
@@ -385,8 +402,16 @@ function needsInlineKeyQuoting(k: string): boolean {
   // significant. Also keep the path-key wrap triggers since the unwrapped
   // key path is used as the JSON key.
   for (const c of k) {
-    if (c === "." || c === "[" || c === "]" || c === "=" || c === ":" ||
-        c === "," || c === "{" || c === "}") {
+    if (
+      c === "." ||
+      c === "[" ||
+      c === "]" ||
+      c === "=" ||
+      c === ":" ||
+      c === "," ||
+      c === "{" ||
+      c === "}"
+    ) {
       return true;
     }
   }
@@ -399,15 +424,18 @@ function encodeInlineCell(v: JSONValue): string {
   // top-level comma splitter tracks `{`-depth and skips `<<<…>>>` ranges, so
   // either character appearing bare mid-cell desynchronizes the split and
   // silently merges or drops neighboring cells.
-  const cell = encodePrimitiveCell(v, (s) =>
-    s.length === 0 ||
-    s.trim() !== s ||
-    s.includes(",") ||
-    s.includes("}") ||
-    s.includes("{") ||
-    s.includes(OPEN) ||
-    s === "[]" ||
-    looksLikeLiteral(s));
+  const cell = encodePrimitiveCell(
+    v,
+    (s) =>
+      s.length === 0 ||
+      s.trim() !== s ||
+      s.includes(",") ||
+      s.includes("}") ||
+      s.includes("{") ||
+      s.includes(OPEN) ||
+      s === "[]" ||
+      looksLikeLiteral(s),
+  );
   if (cell === null) throw new Error(`unexpected inline cell: ${String(v)}`);
   return cell;
 }
@@ -416,15 +444,18 @@ function encodeTableCell(v: JSONValue): string {
   // Same comma-splitter triggers as inline cells (ADR-0018), plus the
   // opener-tail hazard: a table row is a whole line, so a final cell ending
   // in `=<<<` / `=[` would turn the row into a block opener.
-  const cell = encodePrimitiveCell(v, (s) =>
-    s.length === 0 ||
-    s.trim() !== s ||
-    s.includes(",") ||
-    s.includes("{") ||
-    s.includes(OPEN) ||
-    s === "[]" ||
-    looksLikeLiteral(s) ||
-    hasOpenerTail(s));
+  const cell = encodePrimitiveCell(
+    v,
+    (s) =>
+      s.length === 0 ||
+      s.trim() !== s ||
+      s.includes(",") ||
+      s.includes("{") ||
+      s.includes(OPEN) ||
+      s === "[]" ||
+      looksLikeLiteral(s) ||
+      hasOpenerTail(s),
+  );
   if (cell === null) throw new Error(`unexpected table cell value: ${String(v)}`);
   return cell;
 }
@@ -445,7 +476,7 @@ function joinKey(prefix: string, key: string): string {
 function needsKeyQuoting(key: string): boolean {
   if (key.length === 0) return true;
   if (key.includes(OPEN) || key.includes(CLOSE)) {
-    throw new Error(`key contains <<< or >>> which is unsupported in this prototype: ${key}`);
+    throw new Error(`key contains <<< or >>> which RAIF does not support: ${key}`);
   }
   for (const c of key) {
     if (c === "." || c === "[" || c === "]" || c === "=" || c === ":" || c === "\n" || c === "\r") {
@@ -490,7 +521,8 @@ function encodeStringLeaf(value: string): string {
     value.length === 0 ||
     value.trim() !== value ||
     value.startsWith(OPEN) ||
-    value === "[]" || value === "{}" ||
+    value === "[]" ||
+    value === "{}" ||
     value.includes(CLOSE) ||
     hasOpenerTail(value) ||
     looksLikeLiteral(value) ||
@@ -571,7 +603,10 @@ export function parseSchema(decl: string): RaifSchema {
     const at = (msg: string) => new Error(`schema line ${idx + 1}: ${msg}`);
     const sep = findTopLevelChar(line, ":");
     if (sep === -1) throw at(`missing ':' in '${line}'`);
-    const tm = line.slice(sep + 1).trim().match(/^([sntbo])(\?)?$/);
+    const tm = line
+      .slice(sep + 1)
+      .trim()
+      .match(/^([sntbo])(\?)?$/);
     if (!tm) throw at(`bad type '${line.slice(sep + 1).trim()}'`);
     const segs = parseSchemaPath(line.slice(0, sep).trim(), at);
     let node = root;
@@ -678,7 +713,9 @@ function checkRequired(node: SchemaNode, value: JSONValue, path: string, missing
     }
   }
   if (node.element && Array.isArray(value)) {
-    value.forEach((v, i) => checkRequired(node.element!, v, `${path}[${i}]`, missing));
+    value.forEach((v, i) => {
+      checkRequired(node.element!, v, `${path}[${i}]`, missing);
+    });
   }
 }
 
@@ -694,9 +731,7 @@ export type FixResult =
   | { ok: true; canonical: string; repairs: Repair[] }
   | { ok: false; error: string; repairs: Repair[] };
 
-export type ValidationResult =
-  | { ok: true }
-  | { ok: false; errors: string[] };
+export type ValidationResult = { ok: true } | { ok: false; errors: string[] };
 
 export type LeafError = { line?: number; key?: string; error: string };
 
@@ -1384,7 +1419,7 @@ function safeSet(obj: JSONObject, key: string, value: JSONValue): void {
 }
 
 function safeGet(obj: JSONObject, key: string): JSONValue | undefined {
-  return Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined;
+  return Object.hasOwn(obj, key) ? obj[key] : undefined;
 }
 
 function assemble(
@@ -1429,8 +1464,7 @@ function assemble(
         if (node && node !== OPEN_NODE && !node.element && node.type !== "o") {
           throw new Error(`schema: '${leaf.key}' is not an array`);
         }
-        const elemNode =
-          node === OPEN_NODE || node?.type === "o" ? OPEN_NODE : node?.element;
+        const elemNode = node === OPEN_NODE || node?.type === "o" ? OPEN_NODE : node?.element;
         const elements = leaf.body.rows.map((row) => decodeBareValue(row, repairs, elemNode));
         insert(root, path, elements);
         continue;
@@ -1481,7 +1515,8 @@ function assemble(
     if (missing.length > 0) {
       const err = `schema: missing required field(s): ${missing.join(", ")}`;
       if (!lenientErrors) throw new Error(err);
-      for (const m of missing) lenientErrors.push({ key: m, error: "schema: missing required field" });
+      for (const m of missing)
+        lenientErrors.push({ key: m, error: "schema: missing required field" });
     }
   }
   return root;
@@ -1617,11 +1652,14 @@ function tryParseInlineObject(s: string, repairs?: Repair[], node?: SchemaNode):
     const eq = findTopLevelChar(pair, "=");
     if (eq === -1) return null;
     const rawKey = pair.slice(0, eq);
-    const key = rawKey.startsWith(OPEN) && rawKey.endsWith(CLOSE) && rawKey.length >= OPEN.length + CLOSE.length
-      ? rawKey.slice(OPEN.length, rawKey.length - CLOSE.length)
-      : rawKey;
+    const key =
+      rawKey.startsWith(OPEN) &&
+      rawKey.endsWith(CLOSE) &&
+      rawKey.length >= OPEN.length + CLOSE.length
+        ? rawKey.slice(OPEN.length, rawKey.length - CLOSE.length)
+        : rawKey;
     if (key.length === 0) return null;
-    if (Object.prototype.hasOwnProperty.call(out, key)) return null;
+    if (Object.hasOwn(out, key)) return null;
     const cellNode = childNode(node, key);
     if (node && node !== OPEN_NODE && node.children && cellNode === undefined) {
       throw new Error(`schema: unknown field '${key}' in inline object`);
@@ -1701,7 +1739,13 @@ function consumeSegmentBoundary(key: string, pos: number): number {
 function decodeBody(body: LeafKind, repairs?: Repair[], node?: SchemaNode): JSONValue {
   switch (body.kind) {
     case "multiline":
-      if (node && node !== OPEN_NODE && node.type !== "s" && node.type !== "t" && node.type !== "o") {
+      if (
+        node &&
+        node !== OPEN_NODE &&
+        node.type !== "s" &&
+        node.type !== "t" &&
+        node.type !== "o"
+      ) {
         throw new Error(`schema: multiline block where ${expectedKind(node)} expected`);
       }
       return body.raw;
@@ -1735,7 +1779,7 @@ function decodeBody(body: LeafKind, repairs?: Repair[], node?: SchemaNode): JSON
 }
 
 const expectedKind = (node: SchemaNode): string =>
-  node.element ? "array" : node.children ? "object" : node.type ?? "value";
+  node.element ? "array" : node.children ? "object" : (node.type ?? "value");
 
 function unwrapDelim(raw: string): string {
   if (raw.startsWith(OPEN) && raw.endsWith(CLOSE) && raw.length >= OPEN.length + CLOSE.length) {
@@ -1751,20 +1795,27 @@ function insert(root: JSONObject, path: PathSegment[], value: JSONValue): void {
     const next = path[i + 1]!;
     const childInit: JSONObject | JSONValue[] = next.kind === "index" ? [] : {};
     if (seg.kind === "key") {
-      if (Array.isArray(cursor)) throw new Error(`path collision: list expected dict-key '${seg.name}'`);
+      if (Array.isArray(cursor))
+        throw new Error(`path collision: list expected dict-key '${seg.name}'`);
       const existing: JSONValue | undefined = safeGet(cursor as JSONObject, seg.name);
       if (existing === undefined) {
         safeSet(cursor as JSONObject, seg.name, childInit);
         cursor = childInit;
       } else if (Array.isArray(existing) && next.kind === "index") {
         cursor = existing;
-      } else if (typeof existing === "object" && existing !== null && !Array.isArray(existing) && next.kind === "key") {
+      } else if (
+        typeof existing === "object" &&
+        existing !== null &&
+        !Array.isArray(existing) &&
+        next.kind === "key"
+      ) {
         cursor = existing as JSONObject;
       } else {
         throw new Error(`path collision at '${seg.name}'`);
       }
     } else {
-      if (!Array.isArray(cursor)) throw new Error(`path collision: dict expected list-index ${seg.idx}`);
+      if (!Array.isArray(cursor))
+        throw new Error(`path collision: dict expected list-index ${seg.idx}`);
       while (cursor.length <= seg.idx) (cursor as Slot[]).push(MISSING as never);
       const existing: JSONValue = cursor[seg.idx]!;
       if (existing === (MISSING as never)) {
@@ -1772,7 +1823,12 @@ function insert(root: JSONObject, path: PathSegment[], value: JSONValue): void {
         cursor = childInit;
       } else if (Array.isArray(existing) && next.kind === "index") {
         cursor = existing;
-      } else if (typeof existing === "object" && existing !== null && !Array.isArray(existing) && next.kind === "key") {
+      } else if (
+        typeof existing === "object" &&
+        existing !== null &&
+        !Array.isArray(existing) &&
+        next.kind === "key"
+      ) {
         cursor = existing as JSONObject;
       } else {
         throw new Error(`path collision at index ${seg.idx}`);
@@ -1781,13 +1837,15 @@ function insert(root: JSONObject, path: PathSegment[], value: JSONValue): void {
   }
   const last = path[path.length - 1]!;
   if (last.kind === "key") {
-    if (Array.isArray(cursor)) throw new Error(`path collision: list expected dict-key '${last.name}'`);
+    if (Array.isArray(cursor))
+      throw new Error(`path collision: list expected dict-key '${last.name}'`);
     if (safeGet(cursor as JSONObject, last.name) !== undefined) {
       throw new Error(`path collision: '${last.name}' already exists`);
     }
     safeSet(cursor as JSONObject, last.name, value);
   } else {
-    if (!Array.isArray(cursor)) throw new Error(`path collision: dict expected list-index ${last.idx}`);
+    if (!Array.isArray(cursor))
+      throw new Error(`path collision: dict expected list-index ${last.idx}`);
     while (cursor.length <= last.idx) (cursor as Slot[]).push(MISSING as never);
     if (cursor[last.idx] !== (MISSING as never)) {
       throw new Error(`path collision: index ${last.idx} already exists`);

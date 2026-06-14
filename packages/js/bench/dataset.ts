@@ -37,7 +37,7 @@
 // inline for eval/debugging (`source` lets checkers verify prompt↔completion
 // fidelity without running the decoder).
 
-import { encode, type JSONObject, type JSONValue } from "./raif.ts";
+import { encode, type JSONObject, type JSONValue } from "../src/raif.ts";
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 

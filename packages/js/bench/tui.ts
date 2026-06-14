@@ -1,7 +1,7 @@
 // Throwaway TUI: pick a corpus entry, see JSON / RAIF / decoded side by side.
 // Run with: bun run tui
 
-import { encode, decode } from "./raif.ts";
+import { encode, decode } from "../src/raif.ts";
 import { corpus } from "./corpus.ts";
 import { deepEqual } from "./json_equal.ts";
 import { encode as bpeEncode } from "gpt-tokenizer";
