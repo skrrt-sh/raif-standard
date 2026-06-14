@@ -1,6 +1,6 @@
-# RAIF Standard v0.3
+# RAIF Standard v0.3 (base spec for the v0.5 surface)
 
-> v0.3 supersedes v0.2 (`raif_v0.2_spec.md`). Changes are tracked in ADRs 0010 (inline-object form), 0011 (multiline nonce is optional), 0012 (encoder picks the cheapest emission), and 0013 (multi-line array literal). v0.2 is retained for historical reference; the running prototype implements v0.3.
+> **Version & status.** This is the **base specification**. The current RAIF surface is **v0.5 = this document + the ADR amendments 0010–0019** (the amendment notes below capture the v0.4.x changes folded into v0.5). v0.3 supersedes v0.2 (`raif_v0.2_spec.md`); changes from v0.2 are tracked in ADRs 0010 (inline-object form), 0011 (multiline nonce is optional), 0012 (encoder picks the cheapest emission), and 0013 (multi-line array literal). v0.2 is retained for historical reference. The two shipped packages — the `raif` npm package (`packages/js`, the canonical TypeScript reference) and the `raif` PyPI package (`packages/py`) — implement this v0.5 surface, and their cross-language parity is enforced by the shared `conformance/` corpus.
 
 > **Amendments in force ([ADR-0018](./adr/0018-round-trip-hardening.md), 2026-06-13)** — to be folded into the v0.5 spec:
 >

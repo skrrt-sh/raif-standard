@@ -13,8 +13,8 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
-  <img src="https://img.shields.io/badge/spec-v0.4.2-5856d6" alt="Spec v0.4.2">
-  <img src="https://img.shields.io/badge/tests-153%20passing-brightgreen" alt="153 tests passing">
+  <img src="https://img.shields.io/badge/spec-v0.5-5856d6" alt="Spec v0.5">
+  <img src="https://img.shields.io/badge/impls-TypeScript%20%2B%20Python-brightgreen" alt="TypeScript + Python implementations">
   <img src="https://img.shields.io/badge/tokens-14%25%20fewer%20vs%20JSON-success" alt="14% fewer tokens than JSON">
   <a href="https://huggingface.co/skrrt-sh/raif-llama-3.2-3b-lora"><img src="https://img.shields.io/badge/model-Hugging%20Face-ffb000" alt="Model on Hugging Face"></a>
 </p>
@@ -93,14 +93,38 @@ fix(raif, schema?)            // → canonical RAIF
 validate(raif, schema?)       // read-only canonicality check
 ```
 
+## Implementations
+
+The same four-function API in two languages, kept in lockstep by a shared,
+language-agnostic [conformance corpus](conformance/) generated from the reference
+encoder. Both are dependency-light (zero runtime dependencies in the core path).
+
+| Language | Package | Source | Surface |
+|---|---|---|---|
+| TypeScript (reference) | [`raif`](https://www.npmjs.com/package/raif) on npm | [`packages/js`](packages/js) | `encode` · `decode` · `decodeLenient` · `fix` · `validate` |
+| Python | [`raif`](https://pypi.org/project/raif/) on PyPI | [`packages/py`](packages/py) | `encode` · `decode` · `decode_lenient` · `fix` · `validate` |
+
+```py
+from raif import encode, decode
+
+encode({"user": {"name": "Ada"}, "active": True})
+decode(raif)["value"]   # → the exact JSON object back
+```
+
 ## Quick start
 
 ```sh
-cd prototype && bun install
-bun check   # round-trip across the corpus
-bun test    # 153 property tests
-bun bench   # token comparison vs JSON
+# TypeScript (packages/js)
+cd packages/js && bun install
+bun test          # 247 tests: property suite + shared conformance corpus
+bun run build     # dual ESM+CJS + types
+
+# Python (packages/py)
+cd packages/py && uv sync
+uv run pytest     # unit + conformance + (dev-only) differential vs the TS reference
 ```
+
+Toolchains are pinned in [`mise.toml`](mise.toml) (`mise install`).
 
 ## Fine-tuned model
 
@@ -122,9 +146,12 @@ not compression, not a schema language, and not an LLM-*input* format.
 ## Project layout
 
 ```
-docs/raif_v0.3_spec.md     specification (+ ADR amendments toward v0.5)
-docs/adr/0001…0019         design decisions, one per file
-prototype/src/raif.ts      encoder + decoder (pure, dependency-light)
+docs/raif_v0.3_spec.md     base specification; the v0.5 surface = this doc + the ADRs
+docs/adr/0001…0019         design decisions (the v0.5 amendments), one per file
+conformance/               language-agnostic test corpus (the cross-impl contract)
+packages/js/src/raif.ts    TypeScript reference encoder + decoder (pure)
+packages/py/src/raif/      Python implementation (encode/decode/fix/validate)
+mise.toml                  pinned toolchains (node, bun, python, uv)
 CONTEXT.md                 glossary — read first
 HANDOFF.md                 full project state and findings
 ```

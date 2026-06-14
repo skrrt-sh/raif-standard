@@ -1,5 +1,7 @@
 # RAIF Handoff — for the next agent (or future you)
 
+> **Current state (2026-06):** RAIF is now packaged as a monorepo in two languages — the `raif` npm package (the canonical TypeScript reference, in `packages/js`) and the `raif` PyPI package (the full Python implementation, in `packages/py`) — both at v0.5.0, tested against a shared language-agnostic conformance corpus in `conformance/`. The historical narrative below predates the restructure (it refers to a single `prototype/` directory); the design history is accurate, only the paths and run commands have moved. See "Where everything lives" for the current layout.
+
 ## What is RAIF
 
 **RAIF** (Repairable AI Interchange Format) is a wire format for a single JSON object emitted by an LLM, designed to replace JSON as the model-facing output for tool calls and structured generation. It round-trips deterministically to JSON, recovers locally from syntax errors (one bad leaf doesn't destroy the document), and beats JSON on tokens across most realistic shapes.
@@ -9,13 +11,16 @@ JSON assumes a deterministic writer. RAIF assumes a probabilistic writer (the mo
 ## Where everything lives
 
 ```
-raif-standard/
+raif-standard/                          ← monorepo root
 ├── HANDOFF.md                          ← you are here
 ├── CONTEXT.md                          ← glossary; read this first
+├── README.md                           ← project overview (spec badge: v0.5)
+├── mise.toml                           ← pins node / bun / python / uv
 ├── docs/
 │   ├── raif_standard_handoff.md        ← v0.1 (the original handoff that started this work)
 │   ├── raif_v0.2_spec.md               ← v0.2 spec (historical)
-│   ├── raif_v0.3_spec.md               ← v0.3 spec (the current spec)
+│   ├── raif_v0.3_spec.md               ← base spec; v0.5 surface = this doc + ADRs 0010–0019
+│   ├── fine_tune_plan.md               ← fine-tune execution plan (raif-lora workstream)
 │   └── adr/
 │       ├── 0001 — text-block delimiters (`<<<` / `>>>`, with per-block nonce when needed)
 │       ├── 0002 — sentinels (SUPERSEDED by 0009)
@@ -33,15 +38,26 @@ raif-standard/
 │       ├── 0014 — four-function API surface (encode/decode/fix/validate)
 │       ├── 0015 — deterministic decoder repair tier (TIER 2 A/B/C/D)
 │       ├── 0016 — schema-as-parity design principle (optional schema parameter)
-│       └── 0017 — fine-tune integration philosophy (LoRA + GBNF, 3B target)
-└── prototype/
-    ├── README.md                       ← run commands, per-run NOTES
-    ├── src/raif.ts                     ← encoder + decoder (the keepers; pure functions)
-    ├── src/corpus.ts                   ← 18 representative JSON shapes
-    ├── src/bench.ts                    ← batch benchmark
-    ├── src/raif.test.ts                ← 60 property tests
-    ├── src/check.ts                    ← round-trip smoke test
-    └── src/tui.ts                      ← interactive browser
+│       ├── 0017 — fine-tune integration philosophy (LoRA + GBNF, 3B target)
+│       ├── 0018 — round-trip hardening
+│       └── 0019 — schema-typed decode + generation profile
+├── conformance/                        ← shared language-agnostic corpus (178 cases)
+│   ├── generate.ts                     ← regenerates the corpus from the TS reference
+│   └── encode.json / decode.json / lenient.json / fix.json / validate.json
+├── packages/
+│   ├── js/                             ← the `raif` npm package (canonical TS reference)
+│   │   ├── README.md
+│   │   ├── src/index.ts                ← package entry
+│   │   ├── src/raif.ts                 ← encoder + decoder (the keepers; pure functions)
+│   │   ├── bench/corpus.ts             ← representative JSON shapes (dev-only, not published)
+│   │   ├── bench/bench.ts              ← batch benchmark
+│   │   ├── bench/harness.ts            ← LLM translation harness
+│   │   ├── bench/tui.ts                ← interactive browser
+│   │   └── test/                       ← property + regression tests
+│   └── py/                             ← the `raif` PyPI package (full Python implementation)
+│       ├── README.md
+│       ├── src/raif/                   ← encode / decode / decode_lenient / fix / validate
+│       └── tests/
 ```
 
 ## How we got here (one paragraph)
@@ -76,7 +92,7 @@ User brought a v0.1 spec written as a handoff doc and asked for a grilling sessi
 
 **Next step (blocked on charger/time, not on code):** re-run the warm LoRA (`configs/llama-3-3b-sft-warm.yaml`) on the regenerated data; fidelity should move off 0% materially. Then the full acceptance run per `docs/fine_tune_plan.md` §5.
 
-**v0.4 (post-Track-1) summary** — ADRs 0014–0017 captured the design; `prototype/src/raif.ts` implements it.
+**v0.4 (post-Track-1) summary** — ADRs 0014–0017 captured the design; `packages/js/src/raif.ts` implements it.
 
 | Pillar | Status |
 |---|---|
@@ -87,23 +103,35 @@ User brought a v0.1 spec written as a handoff doc and asked for a grilling sessi
 | Self-healing — TIER 2 (structure, v0.4) | ADR-0015. **A** leading-zero number → string (formal invariant; already v0.3 behavior). **B** repeated-key auto-indexing. **C** nested inline-object flattening via brace-depth-aware comma split. **D** sparse table mode (decoder-accept). Empirical: on the 216 v0.3 OpenRouter outputs, +10 parses / +1 fidelity with zero regressions. C is the workhorse (21 firings); B and D fire occasionally. |
 | Model correctness | **6-model OpenRouter sweep re-run with v0.4** — `gpt-oss-20b` 100% parse / 89% fidelity (was 100/83), `claude-haiku-4.5` 97/72 (was 94/72), `gemma-3-4b` 75/47 (was 64/42). 7B class still at 42-44% fidelity. Residual is the schema-class ambiguity (pathological keys, bare-literal strings) which is fine-tune territory per [ADR-0017](./docs/adr/0017-fine-tune-integration-philosophy.md). Track 2 markers explicitly skipped — fine-tune is the chosen vehicle. |
 
-## Prototype run commands
+## Run commands
+
+The TypeScript reference and its dev/bench tooling live in `packages/js` (run with `bun`); the Python package lives in `packages/py` (run with `uv`).
 
 ```sh
-cd prototype
-mise install              # bun 1.3.13
+mise install              # pins node / bun / python / uv
+
+# TypeScript reference (the `raif` npm package)
+cd packages/js
 bun install               # gpt-tokenizer + types
-bun check                 # 14/14 round-trip
-bun test                  # 34/34 property tests
-bun bench                 # token comparison vs JSON
-bun tui                   # interactive single-case browser
+bun test                  # property + regression tests
+bun run build             # build the publishable package
+bun run bench/bench.ts    # token comparison vs JSON
+bun run bench/tui.ts      # interactive single-case browser
+
+# Python (the `raif` PyPI package)
+cd packages/py
+uv sync
+uv run pytest
+
+# Shared conformance corpus (regenerate from the TS reference)
+bun run conformance/generate.ts
 ```
 
 ## What's open
 
 ### Findings from LLM harness — run 1 (`gemma3:4b`, 3 trials × 18 shapes)
 
-The translation harness (`bun harness`, see `prototype/src/harness.ts`) asks a local Ollama model to re-emit each corpus shape as both RAIF and JSON, then scores parse + fidelity + token count. First headline numbers:
+The translation harness (`bun run bench/harness.ts` from `packages/js`, see `packages/js/bench/harness.ts`) asks a local Ollama model to re-emit each corpus shape as both RAIF and JSON, then scores parse + fidelity + token count. First headline numbers:
 
 | metric | RAIF | JSON |
 |---|---:|---:|
@@ -195,11 +223,11 @@ The harness was extended with an OpenRouter provider (`--provider openrouter`, k
 If you're a new agent reading this cold:
 
 1. Read `CONTEXT.md` for vocabulary.
-2. Read `docs/raif_v0.3_spec.md` end to end (~430 lines). `raif_v0.2_spec.md` is kept for historical reference but is superseded.
-3. Skim `docs/adr/0001` through `0013` for the *why* behind each design decision. ADRs 0010–0013 are the v0.3 changes (inline-object form, optional multiline nonce, cheapest-mode pick, multi-line array literal).
-4. Run `cd prototype && bun check && bun test && bun bench` to see the current state in numbers.
-5. If your task involves the encoder/decoder, the only file you need to touch is `prototype/src/raif.ts`. Add corpus cases to `corpus.ts` and tests to `raif.test.ts`. Every change must keep `bun check && bun test` green.
-6. If your task changes wire-format semantics, write a new ADR (next number: 0014) and update the spec to match. Don't edit existing ADRs except for typos or to add a "superseded by" pointer.
+2. Read `docs/raif_v0.3_spec.md` end to end (the base spec; the v0.5 surface is this doc plus ADRs 0010–0019). `raif_v0.2_spec.md` is kept for historical reference but is superseded.
+3. Skim `docs/adr/0001` through `0019` for the *why* behind each design decision. ADRs 0010–0019 are the v0.5 amendments layered on the base spec.
+4. Run `cd packages/js && bun test` (TypeScript reference) and `cd packages/py && uv run pytest` (Python package) to see the current state in numbers.
+5. If your task involves the encoder/decoder, the canonical reference is `packages/js/src/raif.ts` (mirror behavioral changes in `packages/py/src/raif/`). Add corpus cases to `packages/js/bench/corpus.ts` and tests to `packages/js/test/raif.test.ts`. Cross-language parity is enforced by `conformance/` — regenerate it (`bun run conformance/generate.ts`) and keep both packages' conformance tests green.
+6. If your task changes wire-format semantics, write a new ADR (next number: 0020) and update the spec/amendments to match. Don't edit existing ADRs except for typos or to add a "superseded by" pointer.
 
 ## Out-of-scope reminders
 
