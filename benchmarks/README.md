@@ -136,42 +136,31 @@ Share of all 2,500 holdout payloads where RAIF costs strictly more:
 |---|---:|---:|---:|---:|---:|
 | % worse | 29% | 27% | 29% | 29% | **72%** |
 
-Two mechanisms, and the tokenizer decides how much they bite:
+Two causes:
 
-- **Escaping forces a wrapper where RAIF normally has none.** The delimiters are
-  not pricier than JSON quotes — `<<<` + `>>>` = 2 tokens = two quote chars on
-  cl100k/o200k/llama3/qwen. RAIF wins precisely because it usually writes *no*
-  delimiter: a bare `key=value` carries no quotes at all, so a normal field beats
-  JSON's `"key":"value"` (e.g. `to=ops@example.com` = 5 tok vs 7). The loss comes
-  only when a key contains `.`/`[`/`]`, or a value looks like a literal, and RAIF
-  must wrap it — then it pays for delimiters a bare field skips: `<<<user.email>>>=`
-  is 5 tokens vs JSON's `"user.email":` at 3 (+2), and an escaped value
-  `<<<a,b,c>>>` is 5 vs `"a,b,c"` at 4 (+1). It compounds because JSON's quotes
-  *fuse* with adjacent text in BPE (`"user`, `":` are single tokens) while `<<<`
-  and `>>>` stay standalone. On **Mistral** it's worse still — `<<<` is 2 tokens
-  there (`>>>` stays 1). Delimiter choice:
-  [ADR 0001](../docs/adr/0001-text-block-nonce-delimiters.md), probed on cl100k.
-- **Dotted-path expansion.** A single-key object wrapping a nested object becomes
-  `wrapper.a=…`, `wrapper.b=…`, repeating the prefix per field. When one wrapper
-  has many children, that repetition can exceed JSON's single `{…}` — `pathological_keys`
-  and `flat_inline_object` are the shapes that trigger it. This is a path-mode
-  structural cost, independent of the delimiter choice (also noted in ADR 0001).
+- **Escaped keys, not the delimiters.** A bare `key=value` has no quotes, so it
+  beats JSON's `"key":"value"` — that is RAIF's win (a normal field is −2 tokens).
+  RAIF loses only when a key contains `.`/`[`/`]`, or a value looks like a literal,
+  and must be wrapped: `<<<user.email>>>=` is 5 tokens vs `"user.email":` at 3. The
+  `<<<…>>>` pair costs the same as two quotes (2 tokens on cl100k/o200k/llama3/qwen);
+  the extra cost is that a bare key would have paid nothing. On Mistral `<<<` is 2
+  tokens (`>>>` stays 1), so the gap is wider. Delimiter choice:
+  [ADR 0001](../docs/adr/0001-text-block-nonce-delimiters.md).
+- **Dotted paths.** A single-key object around a nested object becomes
+  `wrapper.a=…`, `wrapper.b=…`, repeating the prefix on every field; with enough
+  fields that exceeds JSON's one `{…}`. This drives `flat_inline_object`.
 
-Both losses are small in absolute tokens (typically +1) and concentrate on
-adversarial shapes the `raif-lora` eval set over-samples; they all round-trip
-losslessly. The takeaway is directional: pick RAIF for arrays-of-objects and
-tables; for tiny flat objects with exotic keys, JSON's quoting is already tight —
-especially under tokenizers that split `<<<`.
+Both losses are small (typically +1 token) and round-trip losslessly. Rule of
+thumb: RAIF wins on arrays of objects and tables; it ties or loses on tiny flat
+objects and exotic keys, more so on tokenizers that split `<<<`.
 
-**Tokens aren't the whole tradeoff.** This benchmark counts tokens only. RAIF
-also carries a deterministic repair tier — `decode`/`fix` recover common
-malformed-generation errors from the wire alone (illegal leading-zero numbers →
-strings, repeated keys → array indices, nested inline-objects → path form),
-whereas malformed JSON from a model just fails to parse. See
-[ADR 0015](../docs/adr/0015-deterministic-decoder-repair-tier.md) and
-[ADR 0004](../docs/adr/0004-repair-fixes-syntax-not-values.md). So on the shapes
-where RAIF costs a few extra tokens, those tokens come with error tolerance JSON
-doesn't have — a property this token-cost benchmark does not attempt to score.
+**Tokens aren't the whole story.** This benchmark counts tokens only. RAIF's
+`decode`/`fix` also repairs common malformed model output from the wire
+(leading-zero numbers → strings, repeated keys → array indices, nested
+inline-objects → path form); malformed JSON just fails to parse. So a few extra
+tokens on these shapes buy error tolerance JSON lacks — not scored here. See
+[ADR 0015](../docs/adr/0015-deterministic-decoder-repair-tier.md),
+[ADR 0004](../docs/adr/0004-repair-fixes-syntax-not-values.md).
 
 ## Adding to the benchmark
 
