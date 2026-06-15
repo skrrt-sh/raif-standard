@@ -79,23 +79,25 @@ webhooks, product catalogs. Aggregate −23.7% on cl100k, per-case median −12.
 | `rw_product_catalog` | product list (8 × 5 cols) | 211 | −32.7% |
 | `rw_session_analytics` | session analytics (10 × 10 cols) | 530 | −39.4% |
 
-### 3. Natural distribution (2,500 held-out payloads)
+### 3. Held-out eval corpus (2,500 payloads)
 
-The held-out eval set the fine-tuned models emit, bundled as `holdout.jsonl`
-(gold RAIF + shape, from the `raif-lora` eval split).
+The held-out set the fine-tuned models were evaluated on, bundled as
+`holdout.jsonl` (gold RAIF + shape, from the `raif-lora` eval split). It is
+**equal-weighted across 5 chosen shapes** (500 each), two of them deliberate
+stress shapes (`pathological_keys`, `flat_inline_object`) — a stress mix, not a
+natural frequency distribution.
 
-| tokenizer | aggregate | per-case mean | per-case median | % of payloads RAIF is *worse* |
-|---|---:|---:|---:|---:|
-| `cl100k` | **−14.0%** | −5.5% | −4.3% | 29% |
-| `o200k` | **−14.9%** | −6.6% | −6.3% | 27% |
-| `llama3` | **−14.0%** | −5.5% | −4.3% | 29% |
-| `qwen2.5` | **−12.1%** | −4.8% | −4.0% | 29% |
-| `mistral` | **−7.8%** | +3.5% | +4.2% | 72% |
+| tokenizer | aggregate | per-case mean | per-case median |
+|---|---:|---:|---:|
+| `cl100k` | **−14.0%** | −5.5% | −4.3% |
+| `o200k` | **−14.9%** | −6.6% | −6.3% |
+| `llama3` | **−14.0%** | −5.5% | −4.3% |
+| `qwen2.5` | **−12.1%** | −4.8% | −4.0% |
+| `mistral` | **−7.8%** | +3.5% | +4.2% |
 
-The `%worse` column counts payloads where RAIF costs *strictly more* (29% on
-cl100k); a further ~8% tie, so RAIF is worse-or-even on ~37% — small flat or
-key-heavy objects with little to save. Where RAIF loses, and how that varies by
-tokenizer, is broken out in Section 5.
+The aggregate is token-weighted, so the large tables carry it; the per-case
+mean/median are dragged down by the two stress shapes. Per-shape breakdown is in
+Section 5.
 
 ### 4. Where the 35–70% comes from (repetitive structures)
 
@@ -130,13 +132,11 @@ shape and tokenizer (positive = RAIF cheaper, **negative = RAIF costs more**):
 | `flat_inline_object` | +0.0% | +0.0% | +0.0% | +0.0% | **−16.7%** |
 | `pathological_keys` | **−5.9%** | **−6.5%** | **−5.9%** | **−5.7%** | **−11.1%** |
 
-Share of all 2,500 holdout payloads where RAIF costs strictly more:
-
-| | cl100k | o200k | llama3 | qwen2.5 | mistral |
-|---|---:|---:|---:|---:|---:|
-| % worse | 29% | 27% | 29% | 29% | **72%** |
-
-Two causes:
+There is no single "how often is RAIF worse" number — it depends entirely on how
+much of your data lands on these shapes, so it's a worst-case, not a rate. This
+corpus over-weights the unfavorable shapes on purpose (40% of rows are
+`pathological_keys` + `flat_inline_object`); real payloads rarely carry keys with
+literal `.`/`[`/`]`, so in practice the loss is rare. Two things trigger it:
 
 - **Escaped keys, not the delimiters.** A bare `key=value` has no quotes, so it
   beats JSON's `"key":"value"` — that is RAIF's win (a normal field is −2 tokens).
@@ -151,9 +151,12 @@ Two causes:
   `wrapper.a=…`, `wrapper.b=…`, repeating the prefix on every field; with enough
   fields that exceeds JSON's one `{…}`. This drives `flat_inline_object`.
 
-Both losses are small (typically +1 token) and round-trip losslessly. Rule of
-thumb: RAIF wins on arrays of objects and tables; it ties or loses on tiny flat
-objects and exotic keys, more so on tokenizers that split `<<<`.
+Both losses are small (typically +1 token) and round-trip losslessly. And small
+payloads matter here: a tiny flat object has little to save in the first place,
+so a single exotic key or a one-key wrapper is enough to tip it to a tie or a
+small loss. Rule of thumb: RAIF wins on arrays of objects and tables; it's a wash
+or a slight loss on tiny flat objects and exotic keys, more so on tokenizers that
+split `<<<`.
 
 **Tokens aren't the whole story.** This benchmark counts tokens only. RAIF's
 `decode`/`fix` also repairs common malformed model output from the wire
