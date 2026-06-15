@@ -158,6 +158,16 @@ losslessly. The takeaway is directional: pick RAIF for arrays-of-objects and
 tables; for tiny flat objects with exotic keys, JSON's quoting is already tight —
 especially under tokenizers that split `<<<`.
 
+**Tokens aren't the whole tradeoff.** This benchmark counts tokens only. RAIF
+also carries a deterministic repair tier — `decode`/`fix` recover common
+malformed-generation errors from the wire alone (illegal leading-zero numbers →
+strings, repeated keys → array indices, nested inline-objects → path form),
+whereas malformed JSON from a model just fails to parse. See
+[ADR 0015](../docs/adr/0015-deterministic-decoder-repair-tier.md) and
+[ADR 0004](../docs/adr/0004-repair-fixes-syntax-not-values.md). So on the shapes
+where RAIF costs a few extra tokens, those tokens come with error tolerance JSON
+doesn't have — a property this token-cost benchmark does not attempt to score.
+
 ## Adding to the benchmark
 
 By design, both axes extend with a one-line change:
