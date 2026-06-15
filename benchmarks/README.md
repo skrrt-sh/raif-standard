@@ -6,10 +6,13 @@ Dependencies are declared inline (PEP 723); `uv run` resolves them — no venv, 
 install step.
 
 ```sh
-uv run bench.py                              # cases.json, every tokenizer it can load
-uv run bench.py --holdout ../path/eval.jsonl # also a natural-distribution corpus
-uv run bench.py --markdown                   # emit the tables below
+uv run bench.py                # cases.json + bundled holdout.jsonl, every tokenizer it can load
+uv run bench.py --no-holdout   # curated cases only (skip the 2,500-payload holdout)
+uv run bench.py --markdown     # emit the tables below
 ```
+
+Both inputs are committed (`cases.json`, `holdout.jsonl`), so every number in
+this README reproduces from a clean checkout — no sibling repo required.
 
 RAIF↔JSON is a **lossless** round-trip (`decode(encode(x)) === x`), so this is a
 pure serialization-cost comparison on identical data — no information is traded
@@ -86,8 +89,13 @@ per-case median is **−12.3%**.
 
 ### 3. Natural distribution (2,500 held-out payloads)
 
-The real shape mix the fine-tuned models emit (`--holdout` over the `raif-lora`
-eval set). The aggregate matches the curated corpus — ~14% is not a
+This is the statistical backbone. The 18-shape corpus above is curated, so its
+token-weighted aggregate is sensitive to which payloads are in it (drop the one
+biggest case and it moves ~3pp); the headline should not rest on 18 hand-picked
+examples alone. So we also run the held-out eval set the fine-tuned models emit —
+2,500 real payloads, bundled here as `holdout.jsonl` (gold RAIF + shape, sampled
+from the `raif-lora` eval split). At n=2,500 the aggregate and median are stable
+under resampling, and they match the curated corpus — so ~14% is not a
 cherry-picked corpus artifact.
 
 | tokenizer | aggregate | per-case mean | per-case median | % of payloads RAIF is *worse* |
