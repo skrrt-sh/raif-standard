@@ -141,10 +141,11 @@ Two causes:
 - **Escaped keys, not the delimiters.** A bare `key=value` has no quotes, so it
   beats JSON's `"key":"value"` — that is RAIF's win (a normal field is −2 tokens).
   RAIF loses only when a key contains `.`/`[`/`]`, or a value looks like a literal,
-  and must be wrapped: `<<<user.email>>>=` is 5 tokens vs `"user.email":` at 3. The
-  `<<<…>>>` pair costs the same as two quotes (2 tokens on cl100k/o200k/llama3/qwen);
-  the extra cost is that a bare key would have paid nothing. On Mistral `<<<` is 2
-  tokens (`>>>` stays 1), so the gap is wider. Delimiter choice:
+  and must be wrapped: `<<<user.email>>>=` is 5 tokens vs `"user.email":` at 3.
+  JSON's quotes merge into the neighboring text (`"user` and `":` are each one
+  token); `<<<` and `>>>` stay separate, so when RAIF does escape, the escape
+  costs more than the quote it stands in for. On Mistral the gap widens — `<<<` is
+  2 tokens (`>>>` stays 1). Delimiter choice:
   [ADR 0001](../docs/adr/0001-text-block-nonce-delimiters.md).
 - **Dotted paths.** A single-key object around a nested object becomes
   `wrapper.a=…`, `wrapper.b=…`, repeating the prefix on every field; with enough
