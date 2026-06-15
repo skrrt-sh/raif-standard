@@ -7,14 +7,14 @@
 #   "transformers",  # any open-model tokenizer: Llama, Qwen, Mistral, …
 # ]
 # ///
-"""RAIF vs JSON token cost — across tokenizers, across payload shapes.
+"""RAIF vs JSON token cost: across tokenizers, across payload shapes.
 
 Multi-tokenizer half of the benchmark. The RAIF-vs-TOON/YAML *format* comparison
 lives in the TypeScript bench (`packages/js/bench/compare_formats.ts`) because
 TOON only has a working encoder in JS.
 
 Why Python: the tokenizers are here. `tiktoken` covers the OpenAI vocabularies
-(cl100k, o200k); `transformers.AutoTokenizer` covers essentially every open
+(cl100k, o200k). `transformers.AutoTokenizer` covers essentially every open
 model (Llama, Qwen, Mistral, Gemma, …) with a one-line `from_pretrained`. Adding
 a tokenizer later = one entry in TOKENIZERS. Adding a test case = one entry in
 cases.json. The RAIF encoder used here (`raif.encode` from the published
@@ -28,7 +28,7 @@ Two ways the percentage is reported, because they answer different questions:
                  Lower, because it weights a tiny flat object the same as a
                  1000-token table. Useful for seeing the spread, not for billing.
 
-Dependencies are declared inline (PEP 723); `uv run` resolves them, no venv to
+Dependencies are declared inline (PEP 723). `uv run` resolves them, no venv to
 manage.
 
 Usage:
@@ -50,7 +50,7 @@ HERE = Path(__file__).resolve().parent
 
 
 # ── Tokenizers ──────────────────────────────────────────────────────────────
-# Add a tokenizer by adding one entry. `kind` selects the loader; everything is
+# Add a tokenizer by adding one entry. `kind` selects the loader, everything is
 # lazy + optional, so a missing dependency (or no network for an HF download)
 # skips that column instead of failing the run.
 TOKENIZERS: list[dict] = [
@@ -84,7 +84,7 @@ def load_tokenizers(selected: set[str] | None) -> list[tuple[str, str, callable]
                 fn = lambda s, tok=tok: len(tok.encode(s, add_special_tokens=False))
             fn("warmup")
             out.append((t["label"], t["note"], fn))
-        except Exception as e:  # noqa: BLE001 — any load failure → skip the column
+        except Exception as e:  # noqa: BLE001 (any load failure skips the column)
             print(f"  · skipping {t['label']} ({type(e).__name__}: {str(e)[:60]})")
     return out
 
@@ -111,7 +111,7 @@ def pairs_from_cases(path: Path) -> list[tuple[str, str, str, str]]:
 
 def pairs_from_jsonl(path: Path) -> list[tuple[str, str, str, str]]:
     """[(name, group, json_str, raif_str)] from a RAIF training/eval .jsonl whose
-    last message is the gold RAIF — the real distribution the model emits."""
+    last message is the gold RAIF, the real distribution the model emits."""
     out = []
     dropped = 0
     for line in path.open():
@@ -121,13 +121,13 @@ def pairs_from_jsonl(path: Path) -> list[tuple[str, str, str, str]]:
         gold = ex["messages"][-1]["content"]
         d = raif.decode(gold)
         if not d.get("ok"):
-            dropped += 1  # gold RAIF that won't round-trip — excluded, but counted
+            dropped += 1  # gold RAIF that won't round-trip, excluded but counted
             continue
         shape = ex.get("meta", {}).get("shape", "")
         out.append((shape or "?", shape, minified_json(d["value"]), gold))
     if dropped:
         print(f"  · WARNING: {dropped} holdout row(s) failed to decode and were "
-              f"excluded ({len(out)} kept) — the denominator is smaller than the file")
+              f"excluded ({len(out)} kept). The denominator is smaller than the file")
     return out
 
 
@@ -163,11 +163,11 @@ def groups_of(pairs) -> list[str]:
 
 
 def print_corpus(pairs, toks) -> None:
-    print(f"\n{'='*78}\nRAIF vs minified JSON — token savings (higher = RAIF cheaper)")
+    print(f"\n{'='*78}\nRAIF vs minified JSON token savings (higher = RAIF cheaper)")
     print(f"corpus: {len(pairs)} cases across groups {groups_of(pairs)}")
     print("NOTE: the aggregate is token-weighted, so it is sensitive to corpus mix.")
-    print("      A few huge payloads dominate it — that's why we report per group.")
-    # per-group, per-tokenizer aggregate — never blend curated + extreme into one number
+    print("      A few huge payloads dominate it, that's why we report per group.")
+    # per-group, per-tokenizer aggregate, never blend curated + extreme into one number
     for group in groups_of(pairs):
         gp = [p for p in pairs if p[1] == group]
         print(f"\n── group: {group}  ({len(gp)} cases) ──")
@@ -215,7 +215,7 @@ def main() -> int:
     print("loading tokenizers…")
     toks = load_tokenizers(selected)
     if not toks:
-        raise SystemExit("no tokenizers available; `pip install tiktoken transformers`")
+        raise SystemExit("no tokenizers available. `pip install tiktoken transformers`")
 
     pairs = pairs_from_cases(Path(args.cases))
     print_corpus(pairs, toks)
@@ -231,7 +231,7 @@ def main() -> int:
             s = savings(hp, fn)
             print(f"{label:10} {s['aggregate']:9.1f}% {s['mean']:6.1f}% "
                   f"{s['median']:6.1f}% {s['max']:6.1f}% {s['neg_share']:6.0f}%")
-        # per-shape median per tokenizer — surfaces where RAIF loses and how that
+        # per-shape median per tokenizer, surfaces where RAIF loses and how that
         # varies by tokenizer (pairs_from_jsonl tags each row's group with its shape).
         print("\nholdout per-shape median savings (negative = RAIF costs more):")
         print(f"{'shape':22}" + "".join(f"{lbl:>9}" for lbl, _, _ in toks))

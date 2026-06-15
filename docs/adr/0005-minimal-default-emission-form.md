@@ -2,8 +2,8 @@
 
 > **Superseded in part by [ADR-0001](./0001-text-block-nonce-delimiters.md) (2026-05-16).**
 > Point 4 below adopted `␞` (U+241E) as a "single-token" string delimiter. Empirical
-> probing refuted that assumption — `␞` is **3 tokens** in cl100k_base (2 in qwen, 4 in
-> Mistral), not 1 — so the project reverted to the ASCII `<<<` / `>>>` text-block form.
+> probing refuted that assumption: `␞` is **3 tokens** in cl100k_base (2 in qwen, 4 in
+> Mistral), not 1, so the project reverted to the ASCII `<<<` / `>>>` text-block form.
 > Read every `␞` reference below as `<<<…>>>`; the "single-token" / "cheaper" phrasing is
 > the refuted assumption, not shipped behavior. The actual decision of this ADR
 > (ceremony-free, named, type-inferred default) still stands.
