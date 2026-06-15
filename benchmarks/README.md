@@ -3,11 +3,13 @@
 How many fewer tokens does RAIF cost than the equivalent JSON, and does that hold
 across model tokenizers? This folder is the reproducible answer.
 
+Dependencies are declared inline (PEP 723); `uv run` resolves them — no venv, no
+install step.
+
 ```sh
-pip install -r requirements.txt
-python bench.py                              # cases.json, every tokenizer it can load
-python bench.py --holdout ../path/eval.jsonl # also a natural-distribution corpus
-python bench.py --markdown                   # emit the tables below
+uv run bench.py                              # cases.json, every tokenizer it can load
+uv run bench.py --holdout ../path/eval.jsonl # also a natural-distribution corpus
+uv run bench.py --markdown                   # emit the tables below
 ```
 
 RAIF↔JSON is a **lossless** round-trip (`decode(encode(x)) === x`), so this is a

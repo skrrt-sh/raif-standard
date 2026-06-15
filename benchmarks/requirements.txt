@@ -1,8 +1,0 @@
-# Token-cost benchmark (RAIF vs JSON across tokenizers).
-#   pip install -r requirements.txt
-#   python bench.py
-raif-format       # the canonical RAIF encoder/decoder (import: `raif`)
-tiktoken          # OpenAI vocabularies: cl100k, o200k
-transformers      # any open-model tokenizer: Llama, Qwen, Mistral, Gemma, …
-# transformers needs one of torch / tensorflow only for models — the *tokenizers*
-# load fine without them; ignore the "PyTorch not found" notice.

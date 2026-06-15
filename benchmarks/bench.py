@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "raif-format",   # canonical RAIF encoder/decoder (import: raif)
+#   "tiktoken",      # OpenAI vocabularies: cl100k, o200k
+#   "transformers",  # any open-model tokenizer: Llama, Qwen, Mistral, …
+# ]
+# ///
 """RAIF vs JSON token cost — across tokenizers, across payload shapes.
 
 This is the multi-tokenizer half of the benchmark: it answers "how many fewer
@@ -22,11 +30,13 @@ Two ways the percentage is reported, because they answer different questions:
                  Lower, because it weights a tiny flat object the same as a
                  1000-token table. Useful for seeing the spread, not for billing.
 
+Dependencies are declared inline (PEP 723); `uv run` resolves them, no venv to
+manage.
+
 Usage:
-    pip install -r requirements.txt
-    python bench.py                          # cases.json, all available tokenizers
-    python bench.py --holdout PATH.jsonl     # also run a RAIF .jsonl corpus
-    python bench.py --markdown               # emit the README tables
+    uv run bench.py                          # cases.json, all available tokenizers
+    uv run bench.py --holdout PATH.jsonl     # also run a RAIF .jsonl corpus
+    uv run bench.py --markdown               # emit the README tables
 """
 from __future__ import annotations
 
