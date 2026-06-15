@@ -8,7 +8,7 @@ We inherit JSON's value semantics verbatim. RAIF only changes the *syntax around
 
 1. **One number type (`n`).** Literal grammar is JSON's number grammar: `-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?`. Leading zeros rejected, `NaN`/`Infinity` rejected.
 2. **Booleans, null, strings**: identical literals to JSON (lowercase `true`/`false`/`null`).
-3. **Strings inside `␞...␞`**: raw text, no escaping. Falls back to the multiline nonce-block form (ADR-0001) when the value contains literal `␞` or newlines. The string *content model* differs from JSON (no `\n`/`\t` escapes inside RAIF) but the decoded string value is identical.
+3. **Strings inside `<<<...>>>`**: raw text, no escaping. Falls back to the multiline nonce-block form (ADR-0001) when the value contains literal `>>>` or newlines. The string *content model* differs from JSON (no `\n`/`\t` escapes inside RAIF) but the decoded string value is identical.
 4. **Big integers, decimal precision, Unicode normalization**: inherit host-language behavior.
 5. **Schemas describe object shapes only** — field names, types, required/optional, value constraints. RAIF schemas do not validate standalone primitives.
 

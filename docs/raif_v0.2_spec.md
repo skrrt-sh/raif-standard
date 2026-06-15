@@ -355,9 +355,9 @@ In the prompt-only MVP, mode markers are optional textual tags. In the fine-tune
 For audit trails and durable transport within the same schema generation, the interpreter emits **RAIF-R**: the parsed document re-serialized in canonical form with optional per-leaf checksums.
 
 ```
-body=␞␞␞7f2a
+body=<<<7f2a
 Hello there
-␞␞␞7f2a;a8
+>>>7f2a;a8
 notify=true;1d
 priority=2;33
 subject=Invoice ready;3c
@@ -381,9 +381,9 @@ RAIF-R is interpreter-generated only. Models emit the loose default form; interp
 |---|---|---|
 | Brace / quote balancing | Required, brittle under truncation | None at top level |
 | Per-field recovery | None (one bad escape destroys the object) | Each leaf is independent |
-| Special-character strings | Backslash escaping required | `␞...␞` raw delimiter |
+| Special-character strings | Backslash escaping required | `<<<...>>>` raw delimiter |
 | Multiline strings | `\n` escapes only | Native via nonce block |
-| Token cost (3-field tool call) | ~18 | ~15 (-12%) |
+| Token cost (3-field tool call) | ~17 | ~15 (-12%) |
 | Token cost (homogeneous array, 10 rows) | ~180 | ~133 (-26%) |
 | Token cost (text-heavy payload) | High (escape pairs) | Low (no escaping) |
 | Overall corpus benchmark | baseline | **-8%** |

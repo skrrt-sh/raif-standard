@@ -6,7 +6,7 @@ RAIF text blocks need a delimiter that survives arbitrary embedded payloads — 
 
 ## Forms
 
-- **Bare single-line delimited:** `field=<<<value>>>` — used when the value contains a RAIF-significant character, leading/trailing whitespace, or looks like a literal. Two tokens of delimiter overhead per string, matching JSON's `"..."`.
+- **Bare single-line delimited:** `field=<<<value>>>` — used when the value contains a RAIF-significant character, leading/trailing whitespace, or looks like a literal. On cl100k_base / o200k_base / llama3 / qwen the delimiters cost two tokens (`<<<` and `>>>` are 1 token each), matching JSON's two quote chars; on Mistral `<<<` is 2 tokens and `>>>` is 1, so the delimiter overhead is three tokens and does not match JSON's quotes.
 - **Nonce-bounded:** `field=<<<NONCE\n...\n>>>NONCE` — used when the value contains `\n`, `\r`, or a literal `>>>`. The nonce is a short hex string randomly generated per block by the encoder; collision probability is ~1/65 536 for 4-hex-char nonces.
 
 ## Considered options
