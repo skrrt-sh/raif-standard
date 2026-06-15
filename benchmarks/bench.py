@@ -192,12 +192,18 @@ def emit_markdown(pairs, toks, group: str = "corpus") -> None:
     """The headline cross-tokenizer table, on the balanced corpus only (not the
     extreme/degenerate cases, which would inflate a token-weighted aggregate)."""
     gp = [p for p in pairs if p[1] == group]
+
+    def fmt_pct(v: float) -> str:
+        # positive savings means fewer tokens, shown as a reduction (−x%)
+        # negative savings means more tokens, shown as an increase (+x%)
+        return f"−{v:.1f}%" if v >= 0 else f"+{abs(v):.1f}%"
+
     print(f"\n<!-- markdown: group={group}, {len(gp)} cases -->")
     print("| tokenizer | models | aggregate | per-case median | best case |")
     print("|---|---|---:|---:|---:|")
     for label, note, fn in toks:
         s = savings(gp, fn)
-        print(f"| `{label}` | {note} | **−{s['aggregate']:.1f}%** | −{s['median']:.1f}% | −{s['max']:.1f}% |")
+        print(f"| `{label}` | {note} | **{fmt_pct(s['aggregate'])}** | {fmt_pct(s['median'])} | {fmt_pct(s['max'])} |")
 
 
 def main() -> int:
@@ -211,7 +217,13 @@ def main() -> int:
     ap.add_argument("--markdown", action="store_true", help="emit README tables")
     args = ap.parse_args()
 
-    selected = set(args.tokenizers.split(",")) if args.tokenizers else None
+    selected = None
+    if args.tokenizers:
+        selected = {s.strip() for s in args.tokenizers.split(",") if s.strip()}
+        known = {t["label"] for t in TOKENIZERS}
+        unknown = selected - known
+        if unknown:
+            raise SystemExit(f"unknown tokenizer label(s) {sorted(unknown)}, valid: {sorted(known)}")
     print("loading tokenizers…")
     toks = load_tokenizers(selected)
     if not toks:
