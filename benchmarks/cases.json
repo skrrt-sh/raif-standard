@@ -2028,5 +2028,214 @@
    "active": true,
    "role": "admin"
   }
+ },
+ {
+  "name": "rw_user_record",
+  "group": "real_world",
+  "value": {
+   "id": "usr_4e8f2a",
+   "username": "john_doe",
+   "email": "john.doe@example.com",
+   "first_name": "John",
+   "last_name": "Doe",
+   "phone": "+1-555-0123",
+   "role": "admin",
+   "is_active": true,
+   "created_at": "2022-03-15T08:00:00Z",
+   "timezone": "America/New_York",
+   "subscription_plan": "pro",
+   "credits_remaining": 4200
+  }
+ },
+ {
+  "name": "rw_feature_flags",
+  "group": "real_world",
+  "value": {
+   "user_id": "usr_4e8f2a",
+   "plan": "pro",
+   "region": "us-east-1",
+   "is_active": true,
+   "is_verified": true,
+   "is_admin": false,
+   "is_premium": true,
+   "mfa_enabled": true,
+   "email_verified": true,
+   "phone_verified": false,
+   "api_access": true,
+   "beta_features": false,
+   "login_count": 147,
+   "failed_logins": 0,
+   "credits": 4200,
+   "seats": 5
+  }
+ },
+ {
+  "name": "rw_app_config",
+  "group": "real_world",
+  "value": {
+   "server":   {"host": "0.0.0.0", "port": 8080, "workers": 4, "debug": false, "timeout": 30},
+   "database": {"host": "db.internal", "port": 5432, "name": "myapp_prod", "pool": 10, "ssl": true},
+   "cache":    {"host": "redis.internal", "port": 6379, "ttl": 3600, "max_connections": 100},
+   "auth":     {"jwt_expiry": 86400, "refresh_expiry": 604800, "mfa_required": false, "session_timeout": 3600}
+  }
+ },
+ {
+  "name": "rw_order_document",
+  "group": "real_world",
+  "value": {
+   "order_id": "ORD-2024-00456",
+   "status": "confirmed",
+   "currency": "USD",
+   "customer_email": "jane.smith@example.com",
+   "items": [
+    {"sku": "WGT-A", "name": "Widget A", "qty": 3, "price": 29.99},
+    {"sku": "GDG-B", "name": "Gadget B", "qty": 1, "price": 149.99},
+    {"sku": "CSE-C", "name": "Case C",   "qty": 2, "price": 19.99},
+    {"sku": "CBL-D", "name": "Cable D",  "qty": 4, "price": 9.99}
+   ],
+   "subtotal": 299.90,
+   "tax": 24.00,
+   "shipping": 9.99,
+   "total": 333.89
+  }
+ },
+ {
+  "name": "rw_api_list_response",
+  "group": "real_world",
+  "value": {
+   "status": "ok",
+   "code": 200,
+   "total": 3,
+   "has_more": false,
+   "items": [
+    {"id": 1, "name": "Alpha", "status": "active", "score": 9.2, "enabled": true},
+    {"id": 2, "name": "Beta",  "status": "paused", "score": 7.1, "enabled": false},
+    {"id": 3, "name": "Gamma", "status": "active", "score": 8.8, "enabled": true}
+   ]
+  }
+ },
+ {
+  "name": "rw_webhook_payload",
+  "group": "real_world",
+  "value": {
+   "event": "push",
+   "ref": "refs/heads/main",
+   "before": "abc123",
+   "after": "def456",
+   "repository": {"id": 123456, "name": "my-app", "full_name": "org/my-app", "private": true},
+   "pusher": {"name": "john_doe", "email": "john@example.com"},
+   "commits": [
+    {"id": "def456", "message": "feat: add new dashboard endpoint", "author": "John Doe", "added": 3, "removed": 0, "modified": 2},
+    {"id": "abc123", "message": "fix: correct pagination logic",    "author": "John Doe", "added": 1, "removed": 1, "modified": 1}
+   ]
+  }
+ },
+ {
+  "name": "rw_analytics_event",
+  "group": "real_world",
+  "value": {
+   "event": "purchase_completed",
+   "user_id": "usr_4e8f2a",
+   "session_id": "ses_a1b2c3",
+   "timestamp": "2024-03-20T14:32:11Z",
+   "properties": {
+    "product_id": "prod_7d5a2c",
+    "quantity": 2,
+    "revenue": 299.98,
+    "currency": "USD",
+    "category": "electronics",
+    "coupon": null
+   },
+   "context": {"page": "/checkout", "referrer": "/cart", "device": "desktop", "os": "macOS"}
+  }
+ },
+ {
+  "name": "rw_crm_contact",
+  "group": "real_world",
+  "value": {
+   "id": "con_83921f",
+   "company": "Acme Corp",
+   "first_name": "Alice",
+   "last_name": "Baker",
+   "email": "alice.baker@acme.com",
+   "phone": "+1-555-0199",
+   "lead_status": "qualified",
+   "lead_score": 87,
+   "assigned_to": "rep_sales_01",
+   "source": "inbound",
+   "industry": "technology",
+   "company_size": 250,
+   "annual_revenue": 12000000,
+   "last_contacted": "2024-03-15",
+   "deal_value": 45000,
+   "probability": 0.65,
+   "is_customer": false
+  }
+ },
+ {
+  "name": "rw_product_catalog",
+  "group": "real_world",
+  "value": {
+   "products": [
+    {"id": "p001", "name": "Widget A",   "price": 29.99,  "in_stock": true,  "category": "tools"},
+    {"id": "p002", "name": "Gadget B",   "price": 149.99, "in_stock": true,  "category": "electronics"},
+    {"id": "p003", "name": "Case C",     "price": 19.99,  "in_stock": false, "category": "accessories"},
+    {"id": "p004", "name": "Cable D",    "price": 9.99,   "in_stock": true,  "category": "accessories"},
+    {"id": "p005", "name": "Stand E",    "price": 49.99,  "in_stock": true,  "category": "accessories"},
+    {"id": "p006", "name": "Monitor F",  "price": 399.99, "in_stock": false, "category": "electronics"},
+    {"id": "p007", "name": "Keyboard G", "price": 89.99,  "in_stock": true,  "category": "peripherals"},
+    {"id": "p008", "name": "Mouse H",    "price": 59.99,  "in_stock": true,  "category": "peripherals"}
+   ]
+  }
+ },
+ {
+  "name": "rw_daily_metrics",
+  "group": "real_world",
+  "value": {
+   "site_id": "site_abc",
+   "period": "last_7d",
+   "rows": [
+    {"date": "2024-03-14", "views": 1230, "visitors": 840,  "conversions": 18, "revenue": 540.00, "bounce": 0.42},
+    {"date": "2024-03-15", "views": 1540, "visitors": 1020, "conversions": 24, "revenue": 720.00, "bounce": 0.38},
+    {"date": "2024-03-16", "views": 870,  "visitors": 610,  "conversions": 11, "revenue": 330.00, "bounce": 0.51},
+    {"date": "2024-03-17", "views": 720,  "visitors": 490,  "conversions": 9,  "revenue": 270.00, "bounce": 0.55},
+    {"date": "2024-03-18", "views": 1380, "visitors": 930,  "conversions": 21, "revenue": 630.00, "bounce": 0.39},
+    {"date": "2024-03-19", "views": 1650, "visitors": 1100, "conversions": 28, "revenue": 840.00, "bounce": 0.35},
+    {"date": "2024-03-20", "views": 1490, "visitors": 990,  "conversions": 25, "revenue": 750.00, "bounce": 0.37}
+   ]
+  }
+ },
+ {
+  "name": "rw_session_analytics",
+  "group": "real_world",
+  "value": {
+   "site_id": "site_abc",
+   "date": "2024-03-20",
+   "sessions": [
+    {"session_id": "ses_001", "user_id": "usr_111", "duration_s": 342,  "pages": 7,  "events": 23, "conversions": 1, "revenue": 149.99, "country": "US", "device": "desktop", "returning": true},
+    {"session_id": "ses_002", "user_id": "usr_222", "duration_s": 54,   "pages": 2,  "events": 4,  "conversions": 0, "revenue": 0,      "country": "GB", "device": "mobile",  "returning": false},
+    {"session_id": "ses_003", "user_id": "usr_333", "duration_s": 891,  "pages": 14, "events": 51, "conversions": 2, "revenue": 299.98, "country": "US", "device": "desktop", "returning": true},
+    {"session_id": "ses_004", "user_id": "usr_444", "duration_s": 120,  "pages": 3,  "events": 8,  "conversions": 0, "revenue": 0,      "country": "DE", "device": "mobile",  "returning": false},
+    {"session_id": "ses_005", "user_id": "usr_555", "duration_s": 605,  "pages": 9,  "events": 34, "conversions": 1, "revenue": 89.99,  "country": "US", "device": "tablet",  "returning": true},
+    {"session_id": "ses_006", "user_id": "usr_666", "duration_s": 28,   "pages": 1,  "events": 2,  "conversions": 0, "revenue": 0,      "country": "FR", "device": "mobile",  "returning": false},
+    {"session_id": "ses_007", "user_id": "usr_777", "duration_s": 415,  "pages": 8,  "events": 29, "conversions": 1, "revenue": 59.99,  "country": "CA", "device": "desktop", "returning": true},
+    {"session_id": "ses_008", "user_id": "usr_888", "duration_s": 243,  "pages": 5,  "events": 17, "conversions": 0, "revenue": 0,      "country": "AU", "device": "desktop", "returning": false},
+    {"session_id": "ses_009", "user_id": "usr_999", "duration_s": 780,  "pages": 12, "events": 44, "conversions": 3, "revenue": 449.97, "country": "US", "device": "desktop", "returning": true},
+    {"session_id": "ses_010", "user_id": "usr_101", "duration_s": 167,  "pages": 4,  "events": 11, "conversions": 0, "revenue": 0,      "country": "MX", "device": "mobile",  "returning": false}
+   ]
+  }
+ },
+ {
+  "name": "rw_ab_test_results",
+  "group": "real_world",
+  "value": {
+   "experiment": "checkout_cta_v2",
+   "status": "running",
+   "variants": [
+    {"name": "control",   "visitors": 4821, "conversions": 241, "rate": 0.050, "revenue": 7230.00, "winner": false},
+    {"name": "variant_a", "visitors": 4803, "conversions": 288, "rate": 0.060, "revenue": 8640.00, "winner": false},
+    {"name": "variant_b", "visitors": 4756, "conversions": 332, "rate": 0.070, "revenue": 9960.00, "winner": true}
+   ]
+  }
  }
 ]
