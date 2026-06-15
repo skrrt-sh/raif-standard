@@ -4,8 +4,8 @@
 produce: structured outputs, strict objects, JSON mode, tool arguments. The
 canonical TypeScript reference implementation: pure, zero runtime dependencies,
 fully typed. Decodes losslessly back to JSON, repairs the common failure modes of
-generated output, and costs ~14% fewer tokens than JSON. Tool calls are one use
-case, not the point.
+generated output, and costs ~10% fewer tokens than JSON on real workloads (more on
+tables). Tool calls are one use case, not the point.
 
 - Spec & monorepo: <https://github.com/skrrt-sh/raif-standard>
 - Python package: `raif-format` on PyPI

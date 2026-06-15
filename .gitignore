@@ -17,3 +17,8 @@ assets/raif-demo.mp4
 
 # Generated benchmark/harness outputs (regenerate via bun run harness)
 prototype/harness_runs/
+
+# Python (benchmarks/)
+__pycache__/
+*.pyc
+.venv/

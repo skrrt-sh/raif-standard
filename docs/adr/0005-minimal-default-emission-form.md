@@ -1,5 +1,13 @@
 # Default emission form is ceremony-free, named, type-inferred
 
+> **Superseded in part by [ADR-0001](./0001-text-block-nonce-delimiters.md) (2026-05-16).**
+> Point 4 below adopted `␞` (U+241E) as a "single-token" string delimiter. Empirical
+> probing refuted that assumption: `␞` is **3 tokens** in cl100k_base (2 in qwen, 4 in
+> Mistral), not 1, so the project reverted to the ASCII `<<<` / `>>>` text-block form.
+> Read every `␞` reference below as `<<<…>>>`; the "single-token" / "cheaper" phrasing is
+> the refuted assumption, not shipped behavior. The actual decision of this ADR
+> (ceremony-free, named, type-inferred default) still stands.
+
 The original spec's default emission carried a per-object header (`!raif/0.1 s=X m=Y`), a `!end` terminator, mandatory type tags on every leaf, and a `<<<NONCE...>>>NONCE` text block for any non-trivial string. For short objects this ceremony cost ~2× JSON's tokens, which contradicts the "token-efficient" pillar. The original spec also exposed three coequal modes (`pos`, `named`, `path`) and asked the caller to choose.
 
 We collapse the default to a minimal form:
