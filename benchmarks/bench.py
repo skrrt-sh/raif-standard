@@ -231,6 +231,14 @@ def main() -> int:
             s = savings(hp, fn)
             print(f"{label:10} {s['aggregate']:9.1f}% {s['mean']:6.1f}% "
                   f"{s['median']:6.1f}% {s['max']:6.1f}% {s['neg_share']:6.0f}%")
+        # per-shape median per tokenizer — surfaces where RAIF loses and how that
+        # varies by tokenizer (pairs_from_jsonl tags each row's group with its shape).
+        print("\nholdout per-shape median savings (negative = RAIF costs more):")
+        print(f"{'shape':22}" + "".join(f"{lbl:>9}" for lbl, _, _ in toks))
+        for shape in groups_of(hp):
+            sp = [p for p in hp if p[1] == shape]
+            cells = "".join(f"{savings(sp, fn)['median']:+8.1f}%" for _lbl, _n, fn in toks)
+            print(f"{shape:22}{cells}")
     return 0
 
 
