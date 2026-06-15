@@ -225,7 +225,7 @@ def main() -> int:
 
     if args.holdout and not args.no_holdout:
         hp = pairs_from_jsonl(Path(args.holdout))
-        print(f"\n{'='*78}\nHOLDOUT (natural distribution): {len(hp)} payloads")
+        print(f"\n{'='*78}\nHOLDOUT (held-out eval corpus): {len(hp)} payloads")
         print(f"{'tokenizer':10} {'aggregate':>10} {'mean':>7} {'median':>7} {'max':>7} {'%worse':>7}")
         for label, _, fn in toks:
             s = savings(hp, fn)
