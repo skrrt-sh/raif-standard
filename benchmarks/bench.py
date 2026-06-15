@@ -76,7 +76,11 @@ def load_tokenizers(selected: set[str] | None) -> list[tuple[str, str, callable]
             else:
                 from transformers import AutoTokenizer
                 tok = AutoTokenizer.from_pretrained(t["id"])
-                fn = lambda s, tok=tok: len(tok.encode(s))
+                # add_special_tokens=False: measure payload tokens only, not the
+                # model's BOS/EOS wrapper (which is identical regardless of format
+                # and would dilute the ratio). Keeps HF consistent with tiktoken,
+                # whose .encode() adds no special tokens.
+                fn = lambda s, tok=tok: len(tok.encode(s, add_special_tokens=False))
             fn("warmup")
             out.append((t["label"], t["note"], fn))
         except Exception as e:  # noqa: BLE001 — any load failure → skip the column
@@ -92,7 +96,15 @@ def minified_json(value) -> str:
 def pairs_from_cases(path: Path) -> list[tuple[str, str, str, str]]:
     """[(name, group, json_str, raif_str)] from a cases.json (list of {name,group,value})."""
     cases = json.loads(path.read_text())
-    return [(c["name"], c.get("group", ""), minified_json(c["value"]), raif.encode(c["value"]))
+    seen: set[str] = set()
+    for i, c in enumerate(cases):
+        missing = {"name", "group", "value"} - c.keys()
+        if missing:
+            raise SystemExit(f"cases.json[{i}]: missing required key(s) {missing}")
+        if c["name"] in seen:
+            raise SystemExit(f"cases.json[{i}]: duplicate name {c['name']!r}")
+        seen.add(c["name"])
+    return [(c["name"], c["group"], minified_json(c["value"]), raif.encode(c["value"]))
             for c in cases]
 
 
@@ -100,6 +112,7 @@ def pairs_from_jsonl(path: Path) -> list[tuple[str, str, str, str]]:
     """[(name, group, json_str, raif_str)] from a RAIF training/eval .jsonl whose
     last message is the gold RAIF — the real distribution the model emits."""
     out = []
+    dropped = 0
     for line in path.open():
         if not line.strip():
             continue
@@ -107,9 +120,13 @@ def pairs_from_jsonl(path: Path) -> list[tuple[str, str, str, str]]:
         gold = ex["messages"][-1]["content"]
         d = raif.decode(gold)
         if not d.get("ok"):
+            dropped += 1  # gold RAIF that won't round-trip — excluded, but counted
             continue
         shape = ex.get("meta", {}).get("shape", "")
         out.append((shape or "?", shape, minified_json(d["value"]), gold))
+    if dropped:
+        print(f"  · WARNING: {dropped} holdout row(s) failed to decode and were "
+              f"excluded ({len(out)} kept) — the denominator is smaller than the file")
     return out
 
 
@@ -200,7 +217,8 @@ def main() -> int:
     pairs = pairs_from_cases(Path(args.cases))
     print_corpus(pairs, toks)
     if args.markdown:
-        emit_markdown(pairs, toks)
+        emit_markdown(pairs, toks, "corpus")
+        emit_markdown(pairs, toks, "real_world")
 
     if args.holdout:
         hp = pairs_from_jsonl(Path(args.holdout))
