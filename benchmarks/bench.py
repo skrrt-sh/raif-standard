@@ -22,8 +22,8 @@ cases.json. The RAIF encoder used here (`raif.encode` from the published
 
 Two ways the percentage is reported, because they answer different questions:
   - aggregate  = (sum JSON tokens - sum RAIF tokens) / sum JSON tokens.
-                 The real-world figure: total tokens saved over a workload.
-                 This is the ~14% headline.
+                 The billing-relevant figure: total tokens saved over a workload.
+                 ~10% on real function-call data, ~14% on the curated corpus.
   - per-case   = the mean/median of each payload's individual savings.
                  Lower, because it weights a tiny flat object the same as a
                  1000-token table. Useful for seeing the spread, not for billing.

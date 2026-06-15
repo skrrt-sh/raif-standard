@@ -9,14 +9,14 @@
 <p align="center">
   A drop-in layer for the JSON language models produce — structured outputs, JSON mode,<br>
   strict objects, tool arguments alike. It repairs its own syntax errors, round-trips<br>
-  losslessly to JSON, and costs ~14% fewer tokens.
+  losslessly to JSON, and costs ~10% fewer tokens on real workloads (more on tables).
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
   <img src="https://img.shields.io/badge/spec-v0.5-5856d6" alt="Spec v0.5">
   <img src="https://img.shields.io/badge/impls-TypeScript%20%2B%20Python-brightgreen" alt="TypeScript + Python implementations">
-  <img src="https://img.shields.io/badge/tokens-14%25%20fewer%20vs%20JSON-success" alt="14% fewer tokens than JSON">
+  <img src="https://img.shields.io/badge/tokens-~10%25%20fewer%20vs%20JSON-success" alt="~10% fewer tokens than JSON">
   <a href="https://huggingface.co/skrrt-sh/raif-llama-3.2-3b-lora"><img src="https://img.shields.io/badge/model-Hugging%20Face-ffb000" alt="Model on Hugging Face"></a>
 </p>
 
@@ -50,7 +50,7 @@ decode(raif).value; // → the exact JSON object back
 
 | | JSON | RAIF |
 |---|---|---|
-| Token cost | baseline | **−14%** |
+| Token cost | baseline | **−10%** typical, up to −70% |
 | Syntax-error recovery | external (`jsonrepair`), silent | built-in, every repair reported |
 | Truncated output | all-or-nothing parse | per-leaf recovery (**46%** vs 41% leaves) |
 | Lossless round-trip | n/a | byte-exact, canonical, 5,000-seed fuzz-proven |
@@ -58,20 +58,26 @@ decode(raif).value; // → the exact JSON object back
 
 ## Token cost
 
-RAIF↔JSON is lossless, so this is pure serialization cost on identical data. The
-**−14%** is a blended, token-weighted average over an 18-shape corpus, and it is
-*not* a corpus artifact — the same ~14% shows up over 2,500 held-out payloads. It
-depends on the tokenizer: −12% to −16% on the OpenAI, Llama, and Qwen
-vocabularies, but only ~5–8% on Mistral's, which packs JSON punctuation more
-tightly.
+RAIF↔JSON is lossless, so this is pure serialization cost on identical data — no
+information is traded for the smaller count. The most representative figure is on
+**10,677 real function-call payloads**: **−9% to −10%** aggregate (token-weighted,
+the billing-relevant number), median **−11%** per payload, and RAIF is larger than
+JSON on only ~3% of them.
 
-| tokenizer | RAIF vs JSON (18-shape corpus) | RAIF vs JSON (2,500 holdout) |
-|---|---:|---:|
-| `cl100k` (GPT-3.5/4) | **−14.4%** | −14.0% |
-| `o200k` (GPT-4o/4.1) | **−15.9%** | −14.9% |
-| `llama3` | −14.1% | −13.9% |
-| `qwen2.5` | −12.3% | −12.1% |
-| `mistral` | −5.4% | −7.7% |
+There is no single headline, by design. Savings are **shape-driven** — roughly
+break-even on a lone flat record, **−25% to −37%** on tables and event logs, up to
+**~70%** on wide repetitive structures — and **tokenizer-dependent**: the OpenAI,
+Llama, and Qwen vocabularies save most; Mistral packs JSON punctuation tighter, so
+it saves least. Reported per group and per tokenizer rather than blended into one
+number.
+
+| tokenizer | real function-calls (10,677) | 18-shape corpus | 2,500 holdout |
+|---|---:|---:|---:|
+| `cl100k` (GPT-3.5/4) | **−9.2%** | −14.4% | −14.0% |
+| `o200k` (GPT-4o/4.1) | **−10.2%** | −15.9% | −14.9% |
+| `llama3` | −9.2% | −14.4% | −14.0% |
+| `qwen2.5` | −8.3% | −12.3% | −12.1% |
+| `mistral` | −7.9% | −5.5% | −7.8% |
 
 The savings concentrate on **arrays of objects that share keys** — JSON repeats
 every key on every row, RAIF declares them once. So a single flat record saves
