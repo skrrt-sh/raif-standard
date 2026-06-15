@@ -32,8 +32,9 @@ Dependencies are declared inline (PEP 723); `uv run` resolves them, no venv to
 manage.
 
 Usage:
-    uv run bench.py                          # cases.json, all available tokenizers
-    uv run bench.py --holdout PATH.jsonl     # also run a RAIF .jsonl corpus
+    uv run bench.py                          # cases.json + bundled holdout, all tokenizers
+    uv run bench.py --no-holdout             # curated cases only (skip the 2.5k holdout)
+    uv run bench.py --holdout PATH.jsonl     # use a different RAIF .jsonl corpus
     uv run bench.py --markdown               # emit the README tables
 """
 from __future__ import annotations
@@ -203,7 +204,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cases", default=str(HERE / "cases.json"))
-    ap.add_argument("--holdout", help="also run a RAIF .jsonl (gold RAIF in last message)")
+    ap.add_argument("--holdout", default=str(HERE / "holdout.jsonl"),
+                    help="RAIF .jsonl, gold RAIF in last message (default: bundled holdout.jsonl)")
+    ap.add_argument("--no-holdout", action="store_true", help="skip the holdout run")
     ap.add_argument("--tokenizers", help="comma-separated subset of labels")
     ap.add_argument("--markdown", action="store_true", help="emit README tables")
     args = ap.parse_args()
@@ -220,7 +223,7 @@ def main() -> int:
         emit_markdown(pairs, toks, "corpus")
         emit_markdown(pairs, toks, "real_world")
 
-    if args.holdout:
+    if args.holdout and not args.no_holdout:
         hp = pairs_from_jsonl(Path(args.holdout))
         print(f"\n{'='*78}\nHOLDOUT (natural distribution): {len(hp)} payloads")
         print(f"{'tokenizer':10} {'aggregate':>10} {'mean':>7} {'median':>7} {'max':>7} {'%worse':>7}")
