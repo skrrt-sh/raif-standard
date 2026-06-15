@@ -56,10 +56,33 @@ decode(raif).value; // → the exact JSON object back
 | Lossless round-trip | n/a | byte-exact, canonical, 5,000-seed fuzz-proven |
 | Schema-typed decode | n/a | optional — `"null"` stays the string, not `null` |
 
-## Token cost vs other formats
+## Token cost
 
-Lower is better. Measured across an 18-shape corpus with the `cl100k` and `o200k`
-tokenizers. Reproduce with `bun compare`.
+RAIF↔JSON is lossless, so this is pure serialization cost on identical data. The
+**−14%** is a blended, token-weighted average over an 18-shape corpus, and it is
+*not* a corpus artifact — the same ~14% shows up over 2,500 held-out payloads. It
+depends on the tokenizer: −12% to −16% on the OpenAI, Llama, and Qwen
+vocabularies, but only ~5–8% on Mistral's, which packs JSON punctuation more
+tightly.
+
+| tokenizer | RAIF vs JSON (18-shape corpus) | RAIF vs JSON (2,500 holdout) |
+|---|---:|---:|
+| `cl100k` (GPT-3.5/4) | **−14.4%** | −14.0% |
+| `o200k` (GPT-4o/4.1) | **−15.9%** | −14.9% |
+| `llama3` | −14.1% | −13.9% |
+| `qwen2.5` | −12.3% | −12.1% |
+| `mistral` | −5.4% | −7.7% |
+
+The savings concentrate on **arrays of objects that share keys** — JSON repeats
+every key on every row, RAIF declares them once. So a single flat record saves
+little (or ties), while tables and event logs save **25–37%**, up to **~70%** on
+wide repetitive structures. Full methodology, per-shape numbers, and how to add
+tokenizers or cases: **[`benchmarks/`](benchmarks/)** (`python benchmarks/bench.py`).
+
+### vs other formats
+
+Across the same corpus (cl100k / o200k), RAIF also beats compact alternatives;
+reproduce with `bun run bench/compare_formats.ts` in `packages/js`:
 
 | Format | vs JSON (cl100k) | vs JSON (o200k) |
 |---|---:|---:|
@@ -67,9 +90,9 @@ tokenizers. Reproduce with `bun compare`.
 | TOON | −0.2% | −2.1% |
 | YAML | +20.9% | +18.5% |
 
-TOON and YAML are LLM-*input* formats; RAIF targets LLM *output*. The numbers above
-compare only token cost on identical payloads — the repair and recovery guarantees
-below are unique to RAIF.
+TOON and YAML are LLM-*input* formats; RAIF targets LLM *output*. These compare
+only token cost on identical payloads — the repair and recovery guarantees below
+are unique to RAIF.
 
 ## Capabilities
 
