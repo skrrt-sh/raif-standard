@@ -138,14 +138,19 @@ Share of all 2,500 holdout payloads where RAIF costs strictly more:
 
 Two mechanisms, and the tokenizer decides how much they bite:
 
-- **Key/value delimiters.** RAIF wraps pathological keys and literal-looking
-  strings in `<<<…>>>`, and fences multi-line strings with `<<<NONCE … >>>NONCE`.
-  On cl100k / o200k / llama3 / qwen each `<<<` and `>>>` is **1 token**, matching
-  JSON's two quote chars — so RAIF is at parity-to-slightly-worse. On **Mistral,
-  `<<<` is 2 tokens** (`>>>` stays 1), so the same payloads tip clearly negative. This is the
-  delimiter choice from [ADR 0001](../docs/adr/0001-text-block-nonce-delimiters.md),
-  which was probed against cl100k_base; these columns are what it looks like on
-  other tokenizers.
+- **Escaping forces a wrapper where RAIF normally has none.** The delimiters are
+  not pricier than JSON quotes — `<<<` + `>>>` = 2 tokens = two quote chars on
+  cl100k/o200k/llama3/qwen. RAIF wins precisely because it usually writes *no*
+  delimiter: a bare `key=value` carries no quotes at all, so a normal field beats
+  JSON's `"key":"value"` (e.g. `to=ops@example.com` = 5 tok vs 7). The loss comes
+  only when a key contains `.`/`[`/`]`, or a value looks like a literal, and RAIF
+  must wrap it — then it pays for delimiters a bare field skips: `<<<user.email>>>=`
+  is 5 tokens vs JSON's `"user.email":` at 3 (+2), and an escaped value
+  `<<<a,b,c>>>` is 5 vs `"a,b,c"` at 4 (+1). It compounds because JSON's quotes
+  *fuse* with adjacent text in BPE (`"user`, `":` are single tokens) while `<<<`
+  and `>>>` stay standalone. On **Mistral** it's worse still — `<<<` is 2 tokens
+  there (`>>>` stays 1). Delimiter choice:
+  [ADR 0001](../docs/adr/0001-text-block-nonce-delimiters.md), probed on cl100k.
 - **Dotted-path expansion.** A single-key object wrapping a nested object becomes
   `wrapper.a=…`, `wrapper.b=…`, repeating the prefix per field. When one wrapper
   has many children, that repetition can exceed JSON's single `{…}` — `pathological_keys`
