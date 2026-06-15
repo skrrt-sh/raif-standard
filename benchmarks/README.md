@@ -142,7 +142,7 @@ Two mechanisms, and the tokenizer decides how much they bite:
   strings in `<<<…>>>`, and fences multi-line strings with `<<<NONCE … >>>NONCE`.
   On cl100k / o200k / llama3 / qwen each `<<<` and `>>>` is **1 token**, matching
   JSON's two quote chars — so RAIF is at parity-to-slightly-worse. On **Mistral,
-  `<<<` is 2 tokens**, so the same payloads tip clearly negative. This is the
+  `<<<` is 2 tokens** (`>>>` stays 1), so the same payloads tip clearly negative. This is the
   delimiter choice from [ADR 0001](../docs/adr/0001-text-block-nonce-delimiters.md),
   which was probed against cl100k_base; these columns are what it looks like on
   other tokenizers.
