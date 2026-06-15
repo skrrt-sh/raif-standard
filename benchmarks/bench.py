@@ -9,11 +9,9 @@
 # ///
 """RAIF vs JSON token cost — across tokenizers, across payload shapes.
 
-This is the multi-tokenizer half of the benchmark: it answers "how many fewer
-tokens does RAIF cost than the equivalent JSON, and does that hold across
-different model tokenizers?". The RAIF-vs-TOON/YAML *format* comparison lives in
-the TypeScript bench (`packages/js/bench/compare_formats.ts`) because TOON only
-has a working encoder in JS.
+Multi-tokenizer half of the benchmark. The RAIF-vs-TOON/YAML *format* comparison
+lives in the TypeScript bench (`packages/js/bench/compare_formats.ts`) because
+TOON only has a working encoder in JS.
 
 Why Python: the tokenizers are here. `tiktoken` covers the OpenAI vocabularies
 (cl100k, o200k); `transformers.AutoTokenizer` covers essentially every open

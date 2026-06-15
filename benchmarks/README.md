@@ -1,7 +1,6 @@
 # RAIF token-cost benchmark
 
-How many fewer tokens does RAIF cost than the equivalent JSON, and does that hold
-across model tokenizers? This folder is the reproducible answer.
+Multi-tokenizer RAIF-vs-JSON token cost comparison. Reproducible via `uv run bench.py`.
 
 Dependencies are declared inline (PEP 723); `uv run` resolves them — no venv, no
 install step.
