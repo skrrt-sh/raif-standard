@@ -94,9 +94,8 @@ The held-out eval set the fine-tuned models emit, bundled as `holdout.jsonl`
 
 The `%worse` column counts payloads where RAIF costs *strictly more* (29% on
 cl100k); a further ~8% tie, so RAIF is worse-or-even on ~37% — small flat or
-key-heavy objects with little to save. On Mistral the per-payload median is
-positive (RAIF costs more on the typical small payload) while the aggregate is
-negative (the large tabular payloads dominate the token-weighted total).
+key-heavy objects with little to save. Where RAIF loses, and how that varies by
+tokenizer, is broken out in Section 5.
 
 ### 4. Where the 35–70% comes from (repetitive structures)
 
@@ -117,6 +116,47 @@ the columns once (`items::a,b,c`) and writes only the values per row. The wider
 the rows and the more of them, the larger the win — which is why structured agent
 output (tool-call batches, event logs, telemetry, tables) benefits most, and a
 single flat record benefits least.
+
+### 5. Where RAIF is less efficient (and it's tokenizer-dependent)
+
+RAIF is not smaller on every shape. Median per-payload savings on the holdout, by
+shape and tokenizer (positive = RAIF cheaper, **negative = RAIF costs more**):
+
+| shape (n=500 each) | cl100k | o200k | llama3 | qwen2.5 | mistral |
+|---|---:|---:|---:|---:|---:|
+| `large_table` (for contrast) | +23.2% | +23.4% | +23.2% | +19.3% | +19.0% |
+| `multiline_body` | +7.4% | +8.3% | +7.4% | +7.1% | **−3.0%** |
+| `deep_array_literal` | +3.1% | +8.4% | +3.1% | +3.1% | **−2.6%** |
+| `flat_inline_object` | +0.0% | +0.0% | +0.0% | +0.0% | **−16.7%** |
+| `pathological_keys` | **−5.9%** | **−6.5%** | **−5.9%** | **−5.7%** | **−11.1%** |
+
+Share of all 2,500 holdout payloads where RAIF costs strictly more:
+
+| | cl100k | o200k | llama3 | qwen2.5 | mistral |
+|---|---:|---:|---:|---:|---:|
+| % worse | 29% | 27% | 29% | 29% | **72%** |
+
+Two mechanisms, and the tokenizer decides how much they bite:
+
+- **Key/value delimiters.** RAIF wraps pathological keys and literal-looking
+  strings in `<<<…>>>`, and fences multi-line strings with `<<<NONCE … >>>NONCE`.
+  On cl100k / o200k / llama3 / qwen each `<<<` and `>>>` is **1 token**, matching
+  JSON's two quote chars — so RAIF is at parity-to-slightly-worse. On **Mistral,
+  `<<<` is 2 tokens**, so the same payloads tip clearly negative. This is the
+  delimiter choice from [ADR 0001](../docs/adr/0001-text-block-nonce-delimiters.md),
+  which was probed against cl100k_base; these columns are what it looks like on
+  other tokenizers.
+- **Dotted-path expansion.** A single-key object wrapping a nested object becomes
+  `wrapper.a=…`, `wrapper.b=…`, repeating the prefix per field. When one wrapper
+  has many children, that repetition can exceed JSON's single `{…}` — `pathological_keys`
+  and `flat_inline_object` are the shapes that trigger it. This is a path-mode
+  structural cost, independent of the delimiter choice (also noted in ADR 0001).
+
+Both losses are small in absolute tokens (typically +1) and concentrate on
+adversarial shapes the `raif-lora` eval set over-samples; they all round-trip
+losslessly. The takeaway is directional: pick RAIF for arrays-of-objects and
+tables; for tiny flat objects with exotic keys, JSON's quoting is already tight —
+especially under tokenizers that split `<<<`.
 
 ## Adding to the benchmark
 
