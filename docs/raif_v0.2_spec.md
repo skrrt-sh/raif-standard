@@ -171,7 +171,7 @@ including >>> and "quotes" and {braces}.
 >>>7f2a
 ```
 
-Opener: `<<<<nonce>` followed by `\n`. Closer: `>>><nonce>` on its own line. Collision probability is ~1/65 536 per block for 4-hex-char nonces; encoders should widen to 6+ hex chars if a document contains many text blocks.
+Opener: `<<<NONCE` followed by `\n`. Closer: `>>>NONCE` on its own line. Collision probability is ~1/65 536 per block for 4-hex-char nonces, encoders should widen to 6+ hex chars if a document contains many text blocks.
 
 The model emitting RAIF-G copies the nonce verbatim from the opener to the closer. A mismatched nonce is a repairable error if exactly one closer with the expected nonce exists in the stream.
 
