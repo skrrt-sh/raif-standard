@@ -20,21 +20,18 @@ for the smaller token count.
 
 ## TL;DR
 
-- **~14% on our 18-shape curated benchmark** (cl100k). That number comes from one
-  representative payload per RAIF shape — it is a benchmark result, not a
-  universal constant. **Your mileage depends on your data and your tokenizer.**
-- **Real-world data: 3–39% depending on structure.** Flat string-heavy records
-  (user profiles, CRM contacts) save 3–5%. Config objects and feature-flag rows
-  save 10–12%. Structured tables — product catalogs, daily metrics, session
-  analytics — save 17–39%. The dominant factor is whether your JSON has repeated
-  keys across array rows; if it does, RAIF writes the schema once and wins big.
-- **25–37% on tabular / repetitive data**, and up to **~70%** on degenerate
-  wide-and-repetitive structures (pure boolean grids, etc.).
-- **Tokenizer matters.** OpenAI (cl100k/o200k) and Llama tokenize JSON
-  punctuation inefficiently, so RAIF wins most there. Mistral's tokenizer packs
-  JSON much better, so the win shrinks to ~5–8%. We report all tokenizers.
+Token savings vs minified JSON, by data shape and tokenizer:
 
-## Where the number comes from
+- **18-shape curated corpus:** −14% (cl100k); −12% to −16% on cl100k / o200k /
+  Llama / Qwen, −5% on Mistral.
+- **Real-world payloads:** −3% to −39%. Flat string-heavy records −3–5%; configs
+  and feature-flag records −10–12%; arrays of objects that share keys (tables)
+  −17–39%.
+- **Repetitive / tabular data:** −25% to −37%, up to −74% on wide boolean grids.
+- **Tokenizer-dependent:** cl100k/o200k and Llama tokenize JSON punctuation
+  loosely (RAIF saves more); Mistral packs it tighter (−5–8%). All five reported below.
+
+## How savings are measured
 
 `bench.py` reports two percentages, because they answer different questions:
 
@@ -43,18 +40,15 @@ for the smaller token count.
 | **aggregate** | `(Σ json_tokens − Σ raif_tokens) / Σ json_tokens` | the billing-relevant figure: total tokens saved over a workload |
 | **per-case** | mean/median of each payload's own savings | shows the spread; a tiny flat object counts as much as a 1000-token table |
 
-The aggregate is **sensitive to corpus mix** — a few large payloads dominate a
-token-weighted sum. So we never blend a curated corpus with extreme cases into
-one headline; results are reported **per group**.
+The aggregate is token-weighted, so a few large payloads dominate the sum.
+Results are reported per group rather than blended into one number.
 
 ## Results
 
-### 1. Curated benchmark (18 shapes) — the headline
+### 1. Curated corpus (18 shapes)
 
-One representative payload per RAIF shape (`cases.json`, group `corpus`). This is
-the number quoted in the root README. It covers a broad mix of JSON patterns
-(flat records, nested objects, arrays of primitives, mixed-type arrays, tables)
-— it is a benchmark, not a measurement of any specific deployment.
+One representative payload per RAIF shape (`cases.json`, group `corpus`): flat
+records, nested objects, arrays of primitives, mixed-type arrays, and tables.
 
 | tokenizer | models | aggregate | per-case median | best case |
 |---|---|---:|---:|---:|
@@ -66,11 +60,9 @@ the number quoted in the root README. It covers a broad mix of JSON patterns
 
 ### 2. Real-world data patterns (12 cases, group `real_world`)
 
-Representative payloads from actual use cases: user records, configs, orders,
-analytics, webhooks, product catalogs. Savings range from ~3% (flat string-heavy
-records) to ~39% (wide structured tables). Aggregate **−23.7%** on cl100k — but
-note that aggregate is token-weighted, so the large tables dominate it; the
-per-case median is **−12.3%**.
+Payloads from common use cases: user records, configs, orders, analytics,
+webhooks, product catalogs. Aggregate −23.7% on cl100k, per-case median −12.3%
+(the aggregate is token-weighted, so the large tables pull it up).
 
 | case | description | JSON tok | savings (cl100k) |
 |---|---|---:|---:|
@@ -89,14 +81,8 @@ per-case median is **−12.3%**.
 
 ### 3. Natural distribution (2,500 held-out payloads)
 
-This is the statistical backbone. The 18-shape corpus above is curated, so its
-token-weighted aggregate is sensitive to which payloads are in it (drop the one
-biggest case and it moves ~3pp); the headline should not rest on 18 hand-picked
-examples alone. So we also run the held-out eval set the fine-tuned models emit —
-2,500 real payloads, bundled here as `holdout.jsonl` (gold RAIF + shape, sampled
-from the `raif-lora` eval split). At n=2,500 the aggregate and median are stable
-under resampling, and they match the curated corpus — so ~14% is not a
-cherry-picked corpus artifact.
+The held-out eval set the fine-tuned models emit, bundled as `holdout.jsonl`
+(gold RAIF + shape, from the `raif-lora` eval split).
 
 | tokenizer | aggregate | per-case mean | per-case median | % of payloads RAIF is *worse* |
 |---|---:|---:|---:|---:|
@@ -106,13 +92,11 @@ cherry-picked corpus artifact.
 | `qwen2.5` | **−12.1%** | −4.8% | −4.0% | 29% |
 | `mistral` | **−7.8%** | +3.5% | +4.2% | 72% |
 
-Note the honest tail: the `%worse` column counts payloads where RAIF costs
-*strictly more* (29% on cl100k); a further ~8% tie exactly, so RAIF is worse-or-
-even on ~37%. These are small/flat or key-heavy objects with little to save — and
-they are tiny, so the aggregate stays firmly negative. On Mistral's tokenizer the
-per-payload median actually flips positive (RAIF loses on the typical small
-payload); RAIF still wins in aggregate only because the large tabular payloads
-dominate the total.
+The `%worse` column counts payloads where RAIF costs *strictly more* (29% on
+cl100k); a further ~8% tie, so RAIF is worse-or-even on ~37% — small flat or
+key-heavy objects with little to save. On Mistral the per-payload median is
+positive (RAIF costs more on the typical small payload) while the aggregate is
+negative (the large tabular payloads dominate the token-weighted total).
 
 ### 4. Where the 35–70% comes from (repetitive structures)
 
