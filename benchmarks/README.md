@@ -6,13 +6,15 @@ Dependencies are declared inline (PEP 723); `uv run` resolves them — no venv, 
 install step.
 
 ```sh
-uv run bench.py                # cases.json + bundled holdout.jsonl, every tokenizer it can load
-uv run bench.py --no-holdout   # curated cases only (skip the 2,500-payload holdout)
-uv run bench.py --markdown     # emit the tables below
+uv run bench.py                                  # cases.json + bundled stress holdout, all tokenizers
+uv run bench.py --holdout holdout_realistic.jsonl # 10,677 real function-call payloads
+uv run bench.py --no-holdout                      # curated cases only
+uv run bench.py --markdown                        # emit the tables below
 ```
 
-Both inputs are committed (`cases.json`, `holdout.jsonl`), so every number in
-this README reproduces from a clean checkout — no sibling repo required.
+All inputs are committed (`cases.json`, `holdout.jsonl`, `holdout_realistic.jsonl`),
+so every number in this README reproduces from a clean checkout — no sibling repo
+required.
 
 RAIF↔JSON is a **lossless** round-trip (`decode(encode(x)) === x`), so this is a
 pure serialization-cost comparison on identical data — no information is traded
@@ -22,6 +24,9 @@ for the smaller token count.
 
 Token savings vs minified JSON, by data shape and tokenizer:
 
+- **Real function-call data (10,677 actual payloads):** −9% to −10% in aggregate
+  (cl100k −9.2%, o200k −10.2%, Mistral −7.9%), median −11%, RAIF worse on only
+  ~3%. The most realistic figure here (`holdout_realistic.jsonl`).
 - **18-shape curated corpus:** −14% (cl100k); −12% to −16% on cl100k / o200k /
   Llama / Qwen, −5% on Mistral.
 - **Real-world payloads:** −3% to −39%. Flat string-heavy records −3–5%; configs
@@ -151,12 +156,13 @@ literal `.`/`[`/`]`, so in practice the loss is rare. Two things trigger it:
   `wrapper.a=…`, `wrapper.b=…`, repeating the prefix on every field; with enough
   fields that exceeds JSON's one `{…}`. This drives `flat_inline_object`.
 
-Both losses are small (typically +1 token) and round-trip losslessly. And small
-payloads matter here: a tiny flat object has little to save in the first place,
-so a single exotic key or a one-key wrapper is enough to tip it to a tie or a
-small loss. Rule of thumb: RAIF wins on arrays of objects and tables; it's a wash
-or a slight loss on tiny flat objects and exotic keys, more so on tokenizers that
-split `<<<`.
+Both losses are small (typically +1 token) and round-trip losslessly. Small
+payloads have little absolute headroom either way — the median real-data win is
+~2 tokens. Rule of thumb: RAIF wins on flat objects with named scalar fields
+(`key=` drops JSON's quotes — its most common real-world win) and on deep nesting
+or wide shared-key tables; it's a wash on arrays of primitives, and a small loss
+on pathological keys, single-key wrappers, and numeric matrices — more so on
+tokenizers that split `<<<`.
 
 **Tokens aren't the whole story.** This benchmark counts tokens only. RAIF's
 `decode`/`fix` also repairs common malformed model output from the wire
