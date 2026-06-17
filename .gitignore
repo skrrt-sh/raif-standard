@@ -5,8 +5,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Generated demo recordings (rebuild with: vhs assets/raif-demo.tape)
-assets/raif-demo.gif
+# Generated demo recording (rebuild with: vhs assets/raif-demo.tape).
+# The .gif is committed so it renders in the README showcase; the heavier
+# .mp4 stays out of the repo (can't embed inline, rebuildable from the tape).
 assets/raif-demo.mp4
 
 # Local agent / editor state

@@ -20,6 +20,10 @@
   <a href="https://huggingface.co/skrrt-sh/raif-llama-3.2-3b-lora"><img src="https://img.shields.io/badge/model-Hugging%20Face-ffb000" alt="Model on Hugging Face"></a>
 </p>
 
+<p align="center">
+  <img src="assets/raif-demo.gif" alt="RAIF demo — self-repairing decode, truncation recovery, and 9.2% fewer tokens on 10,677 real function-call payloads" width="760">
+</p>
+
 ---
 
 JSON was designed for a deterministic writer. An LLM is not one: it drops a closing
