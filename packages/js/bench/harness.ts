@@ -48,35 +48,45 @@ function parseArgs(argv: string[]): Args {
   };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!;
-    const v = argv[i + 1];
-    if (k === "--provider" && v) {
+    // Consume the value for a flag that takes one. A known flag with no value
+    // gets a clear "requires a value" error instead of falling through to the
+    // unknown-option branch below.
+    const want = (): string => {
+      const v = argv[i + 1];
+      if (v === undefined) {
+        console.error(`✗ ${k} requires a value`);
+        process.exit(1);
+      }
+      i++;
+      return v;
+    };
+    if (k === "--provider") {
+      const v = want();
       if (v !== "ollama" && v !== "openrouter") {
         console.error(`✗ --provider must be 'ollama' or 'openrouter', got '${v}'`);
         process.exit(1);
       }
       a.provider = v;
-      i++;
-    } else if (k === "--trials" && v) {
-      a.trials = parseInt(v, 10);
-      i++;
-    } else if ((k === "--model" || k === "--models") && v) {
-      a.models = v
+    } else if (k === "--trials") {
+      a.trials = parseInt(want(), 10);
+    } else if (k === "--model" || k === "--models") {
+      a.models = want()
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      i++;
-    } else if (k === "--url" && v) {
-      a.url = v;
-      i++;
-    } else if (k === "--shapes" && v) {
-      a.shapes = v.split(",").map((s) => s.trim());
-      i++;
-    } else if (k === "--concurrency" && v) {
-      a.concurrency = parseInt(v, 10);
-      i++;
-    } else if (k === "--out" && v) {
-      a.outDir = v;
-      i++;
+    } else if (k === "--url") {
+      a.url = want();
+    } else if (k === "--shapes") {
+      a.shapes = want()
+        .split(",")
+        .map((s) => s.trim());
+    } else if (k === "--concurrency") {
+      a.concurrency = parseInt(want(), 10);
+    } else if (k === "--out") {
+      a.outDir = want();
+    } else if (k.startsWith("-")) {
+      console.error(`✗ unknown option: ${k}`);
+      process.exit(1);
     }
   }
   // Sensible default model for OpenRouter when none specified.
