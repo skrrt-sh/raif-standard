@@ -15,5 +15,7 @@ export function deepEqual(a: unknown, b: unknown): boolean {
   const kb = Object.keys(b as object).sort();
   if (ka.length !== kb.length) return false;
   if (!ka.every((k, i) => k === kb[i])) return false;
-  return ka.every((k) => deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+  return ka.every((k) =>
+    deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
+  );
 }

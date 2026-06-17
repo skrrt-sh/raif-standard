@@ -132,13 +132,13 @@ export const corpus: CorpusEntry[] = [
     json: {
       orders: [
         { id: 1, customer: "Acme", total: 199.99, paid: true },
-        { id: 2, customer: "Beta", total: 49.00, paid: false },
+        { id: 2, customer: "Beta", total: 49.0, paid: false },
         { id: 3, customer: "Gamma", total: 1500.0, paid: true },
-        { id: 4, customer: "Delta", total: 12.50, paid: true },
+        { id: 4, customer: "Delta", total: 12.5, paid: true },
         { id: 5, customer: "Epsilon", total: 0, paid: false },
         { id: 6, customer: "Zeta", total: 999.99, paid: true },
         { id: 7, customer: "Eta", total: 75.25, paid: false },
-        { id: 8, customer: "Theta", total: 3.00, paid: true },
+        { id: 8, customer: "Theta", total: 3.0, paid: true },
         { id: 9, customer: "Iota", total: 250, paid: true },
         { id: 10, customer: "Kappa", total: 42.42, paid: false },
       ],
@@ -216,8 +216,8 @@ export const corpus: CorpusEntry[] = [
     description: "Long array of primitives — array-literal shines vs `prefix[N]=value` per row",
     json: {
       timestamps: [
-        1715600000, 1715600015, 1715600030, 1715600045, 1715600060,
-        1715600075, 1715600090, 1715600105, 1715600120, 1715600135,
+        1715600000, 1715600015, 1715600030, 1715600045, 1715600060, 1715600075, 1715600090,
+        1715600105, 1715600120, 1715600135,
       ],
     },
   },

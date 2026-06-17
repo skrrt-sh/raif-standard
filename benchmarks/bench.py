@@ -37,6 +37,7 @@ Usage:
     uv run bench.py --holdout PATH.jsonl     # use a different RAIF .jsonl corpus
     uv run bench.py --markdown               # emit the README tables
 """
+
 from __future__ import annotations
 
 import argparse
@@ -54,11 +55,36 @@ HERE = Path(__file__).resolve().parent
 # lazy + optional, so a missing dependency (or no network for an HF download)
 # skips that column instead of failing the run.
 TOKENIZERS: list[dict] = [
-    {"label": "cl100k",   "kind": "tiktoken", "id": "cl100k_base", "note": "GPT-3.5 / GPT-4"},
-    {"label": "o200k",    "kind": "tiktoken", "id": "o200k_base",  "note": "GPT-4o / 4.1 / o-series"},
-    {"label": "llama3",   "kind": "hf", "id": "mlx-community/Llama-3.2-3B-Instruct-bf16", "note": "Llama 3.x"},
-    {"label": "qwen2.5",  "kind": "hf", "id": "mlx-community/Qwen2.5-0.5B-Instruct-bf16", "note": "Qwen 2.5"},
-    {"label": "mistral",  "kind": "hf", "id": "mistralai/Mistral-7B-Instruct-v0.3",      "note": "Mistral 7B v0.3"},
+    {
+        "label": "cl100k",
+        "kind": "tiktoken",
+        "id": "cl100k_base",
+        "note": "GPT-3.5 / GPT-4",
+    },
+    {
+        "label": "o200k",
+        "kind": "tiktoken",
+        "id": "o200k_base",
+        "note": "GPT-4o / 4.1 / o-series",
+    },
+    {
+        "label": "llama3",
+        "kind": "hf",
+        "id": "mlx-community/Llama-3.2-3B-Instruct-bf16",
+        "note": "Llama 3.x",
+    },
+    {
+        "label": "qwen2.5",
+        "kind": "hf",
+        "id": "mlx-community/Qwen2.5-0.5B-Instruct-bf16",
+        "note": "Qwen 2.5",
+    },
+    {
+        "label": "mistral",
+        "kind": "hf",
+        "id": "mistralai/Mistral-7B-Instruct-v0.3",
+        "note": "Mistral 7B v0.3",
+    },
 ]
 
 
@@ -72,10 +98,12 @@ def load_tokenizers(selected: set[str] | None) -> list[tuple[str, str, callable]
         try:
             if t["kind"] == "tiktoken":
                 import tiktoken
+
                 enc = tiktoken.get_encoding(t["id"])
                 fn = lambda s, enc=enc: len(enc.encode(s))
             else:
                 from transformers import AutoTokenizer
+
                 tok = AutoTokenizer.from_pretrained(t["id"])
                 # add_special_tokens=False: measure payload tokens only, not the
                 # model's BOS/EOS wrapper (which is identical regardless of format
@@ -105,8 +133,10 @@ def pairs_from_cases(path: Path) -> list[tuple[str, str, str, str]]:
         if c["name"] in seen:
             raise SystemExit(f"cases.json[{i}]: duplicate name {c['name']!r}")
         seen.add(c["name"])
-    return [(c["name"], c["group"], minified_json(c["value"]), raif.encode(c["value"]))
-            for c in cases]
+    return [
+        (c["name"], c["group"], minified_json(c["value"]), raif.encode(c["value"]))
+        for c in cases
+    ]
 
 
 def pairs_from_jsonl(path: Path) -> list[tuple[str, str, str, str]]:
@@ -126,8 +156,10 @@ def pairs_from_jsonl(path: Path) -> list[tuple[str, str, str, str]]:
         shape = ex.get("meta", {}).get("shape", "")
         out.append((shape or "?", shape, minified_json(d["value"]), gold))
     if dropped:
-        print(f"  · WARNING: {dropped} holdout row(s) failed to decode and were "
-              f"excluded ({len(out)} kept). The denominator is smaller than the file")
+        print(
+            f"  · WARNING: {dropped} holdout row(s) failed to decode and were "
+            f"excluded ({len(out)} kept). The denominator is smaller than the file"
+        )
     return out
 
 
@@ -163,7 +195,7 @@ def groups_of(pairs) -> list[str]:
 
 
 def print_corpus(pairs, toks) -> None:
-    print(f"\n{'='*78}\nRAIF vs minified JSON token savings (higher = RAIF cheaper)")
+    print(f"\n{'=' * 78}\nRAIF vs minified JSON token savings (higher = RAIF cheaper)")
     print(f"corpus: {len(pairs)} cases across groups {groups_of(pairs)}")
     print("NOTE: the aggregate is token-weighted, so it is sensitive to corpus mix.")
     print("      A few huge payloads dominate it, that's why we report per group.")
@@ -171,11 +203,15 @@ def print_corpus(pairs, toks) -> None:
     for group in groups_of(pairs):
         gp = [p for p in pairs if p[1] == group]
         print(f"\n── group: {group}  ({len(gp)} cases) ──")
-        print(f"{'tokenizer':10} {'aggregate':>10} {'mean':>7} {'median':>7} {'max':>7} {'%worse':>7}")
+        print(
+            f"{'tokenizer':10} {'aggregate':>10} {'mean':>7} {'median':>7} {'max':>7} {'%worse':>7}"
+        )
         for label, _note, fn in toks:
             s = savings(gp, fn)
-            print(f"{label:10} {s['aggregate']:9.1f}% {s['mean']:6.1f}% "
-                  f"{s['median']:6.1f}% {s['max']:6.1f}% {s['neg_share']:6.0f}%")
+            print(
+                f"{label:10} {s['aggregate']:9.1f}% {s['mean']:6.1f}% "
+                f"{s['median']:6.1f}% {s['max']:6.1f}% {s['neg_share']:6.0f}%"
+            )
     # per-case detail on the first tokenizer (usually cl100k)
     if toks:
         label, _, fn = toks[0]
@@ -203,15 +239,21 @@ def emit_markdown(pairs, toks, group: str = "corpus") -> None:
     print("|---|---|---:|---:|---:|")
     for label, note, fn in toks:
         s = savings(gp, fn)
-        print(f"| `{label}` | {note} | **{fmt_pct(s['aggregate'])}** | {fmt_pct(s['median'])} | {fmt_pct(s['max'])} |")
+        print(
+            f"| `{label}` | {note} | **{fmt_pct(s['aggregate'])}** | {fmt_pct(s['median'])} | {fmt_pct(s['max'])} |"
+        )
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--cases", default=str(HERE / "cases.json"))
-    ap.add_argument("--holdout", default=str(HERE / "holdout.jsonl"),
-                    help="RAIF .jsonl, gold RAIF in last message (default: bundled holdout.jsonl)")
+    ap.add_argument(
+        "--holdout",
+        default=str(HERE / "holdout.jsonl"),
+        help="RAIF .jsonl, gold RAIF in last message (default: bundled holdout.jsonl)",
+    )
     ap.add_argument("--no-holdout", action="store_true", help="skip the holdout run")
     ap.add_argument("--tokenizers", help="comma-separated subset of labels")
     ap.add_argument("--markdown", action="store_true", help="emit README tables")
@@ -223,7 +265,9 @@ def main() -> int:
         known = {t["label"] for t in TOKENIZERS}
         unknown = selected - known
         if unknown:
-            raise SystemExit(f"unknown tokenizer label(s) {sorted(unknown)}, valid: {sorted(known)}")
+            raise SystemExit(
+                f"unknown tokenizer label(s) {sorted(unknown)}, valid: {sorted(known)}"
+            )
     print("loading tokenizers…")
     toks = load_tokenizers(selected)
     if not toks:
@@ -237,19 +281,25 @@ def main() -> int:
 
     if args.holdout and not args.no_holdout:
         hp = pairs_from_jsonl(Path(args.holdout))
-        print(f"\n{'='*78}\nHOLDOUT (held-out eval corpus): {len(hp)} payloads")
-        print(f"{'tokenizer':10} {'aggregate':>10} {'mean':>7} {'median':>7} {'max':>7} {'%worse':>7}")
+        print(f"\n{'=' * 78}\nHOLDOUT (held-out eval corpus): {len(hp)} payloads")
+        print(
+            f"{'tokenizer':10} {'aggregate':>10} {'mean':>7} {'median':>7} {'max':>7} {'%worse':>7}"
+        )
         for label, _, fn in toks:
             s = savings(hp, fn)
-            print(f"{label:10} {s['aggregate']:9.1f}% {s['mean']:6.1f}% "
-                  f"{s['median']:6.1f}% {s['max']:6.1f}% {s['neg_share']:6.0f}%")
+            print(
+                f"{label:10} {s['aggregate']:9.1f}% {s['mean']:6.1f}% "
+                f"{s['median']:6.1f}% {s['max']:6.1f}% {s['neg_share']:6.0f}%"
+            )
         # per-shape median per tokenizer, surfaces where RAIF loses and how that
         # varies by tokenizer (pairs_from_jsonl tags each row's group with its shape).
         print("\nholdout per-shape median savings (negative = RAIF costs more):")
         print(f"{'shape':22}" + "".join(f"{lbl:>9}" for lbl, _, _ in toks))
         for shape in groups_of(hp):
             sp = [p for p in hp if p[1] == shape]
-            cells = "".join(f"{savings(sp, fn)['median']:+8.1f}%" for _lbl, _n, fn in toks)
+            cells = "".join(
+                f"{savings(sp, fn)['median']:+8.1f}%" for _lbl, _n, fn in toks
+            )
             print(f"{shape:22}{cells}")
     return 0
 

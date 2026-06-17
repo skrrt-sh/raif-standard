@@ -15,12 +15,12 @@
 // the same outputs can be re-scored later (e.g. after a repair-pass change)
 // without re-querying the model. The API key is NEVER written to disk.
 
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { encode as bpeEncode } from "gpt-tokenizer";
 import { decode, type JSONObject } from "../src/raif.ts";
 import { corpus } from "./corpus.ts";
-import { deepEqual } from "./json_equal.ts";
 import { buildPrompt } from "./harness_prompts.ts";
-import { writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { deepEqual } from "./json_equal.ts";
 
 // ─── CLI args ─────────────────────────────────────────────────────────
 
@@ -29,9 +29,9 @@ type Provider = "ollama" | "openrouter";
 interface Args {
   provider: Provider;
   trials: number;
-  models: string[];                // one or more model ids
-  url: string;                     // base URL (ollama only)
-  shapes: string[] | null;         // null = all
+  models: string[]; // one or more model ids
+  url: string; // base URL (ollama only)
+  shapes: string[] | null; // null = all
   concurrency: number;
   outDir: string;
 }
@@ -48,28 +48,90 @@ function parseArgs(argv: string[]): Args {
   };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!;
-    const v = argv[i + 1];
-    if (k === "--provider" && v) {
+    // Consume the value for a flag that takes one. A known flag with no value
+    // gets a clear "requires a value" error instead of falling through to the
+    // unknown-option branch below.
+    const want = (): string => {
+      const v = argv[i + 1];
+      if (v === undefined) {
+        console.error(`✗ ${k} requires a value`);
+        process.exit(1);
+      }
+      i++;
+      return v;
+    };
+    if (k === "--provider") {
+      const v = want();
       if (v !== "ollama" && v !== "openrouter") {
         console.error(`✗ --provider must be 'ollama' or 'openrouter', got '${v}'`);
         process.exit(1);
       }
       a.provider = v;
-      i++;
-    } else if (k === "--trials" && v) { a.trials = parseInt(v, 10); i++; }
-    else if ((k === "--model" || k === "--models") && v) {
-      a.models = v.split(",").map((s) => s.trim()).filter(Boolean);
-      i++;
-    } else if (k === "--url" && v) { a.url = v; i++; }
-    else if (k === "--shapes" && v) { a.shapes = v.split(",").map((s) => s.trim()); i++; }
-    else if (k === "--concurrency" && v) { a.concurrency = parseInt(v, 10); i++; }
-    else if (k === "--out" && v) { a.outDir = v; i++; }
+    } else if (k === "--trials") {
+      a.trials = parseInt(want(), 10);
+    } else if (k === "--model" || k === "--models") {
+      a.models = want()
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (k === "--url") {
+      a.url = want();
+    } else if (k === "--shapes") {
+      a.shapes = want()
+        .split(",")
+        .map((s) => s.trim());
+    } else if (k === "--concurrency") {
+      a.concurrency = parseInt(want(), 10);
+    } else if (k === "--out") {
+      a.outDir = want();
+    } else if (k === "--help" || k === "-h") {
+      printUsage();
+      process.exit(0);
+    } else if (k.startsWith("-")) {
+      console.error(`✗ unknown option: ${k}`);
+      process.exit(1);
+    }
   }
   // Sensible default model for OpenRouter when none specified.
   if (a.provider === "openrouter" && a.models.length === 1 && a.models[0] === "qwen2.5:1.5b") {
     a.models = ["meta-llama/llama-3.1-8b-instruct"];
   }
+  if (!Number.isInteger(a.trials) || a.trials <= 0) {
+    console.error("✗ --trials must be a positive integer");
+    process.exit(1);
+  }
+  if (a.models.length === 0) {
+    console.error("✗ --models must include at least one model id");
+    process.exit(1);
+  }
+  if (!Number.isInteger(a.concurrency) || a.concurrency <= 0) {
+    console.error("✗ --concurrency must be a positive integer");
+    process.exit(1);
+  }
   return a;
+}
+
+function printUsage(): void {
+  console.log(`LLM harness — re-emit corpus JSON as RAIF and JSON, then score it.
+
+Usage:
+  bun harness                                        # local Ollama, default model
+  bun harness --provider openrouter --models a,b     # remote via OpenRouter
+  bun harness --trials 5
+  bun harness --shapes short_tool_call,nested_object
+
+Flags:
+  --provider <ollama|openrouter>   inference backend (default: ollama)
+  --models <a,b,…>                 comma-separated model ids
+  --trials <n>                     trials per shape (positive int, default: 3)
+  --shapes <a,b,…>                 restrict to these corpus shapes (default: all)
+  --concurrency <n>                in-flight requests (positive int, default: 3)
+  --url <url>                      Ollama base URL (default: http://localhost:11434)
+  --out <dir>                      output dir for raw run JSON (default: harness_runs)
+  -h, --help                       show this help
+
+Env:
+  OPENROUTER_API_KEY=…             required for --provider openrouter`);
 }
 
 // ─── Provider clients ─────────────────────────────────────────────────
@@ -111,7 +173,12 @@ interface OpenAICompletionResponse {
   choices: Array<{ message: { content: string | null } }>;
 }
 
-async function openRouterGenerate(args: Args, model: string, prompt: string, apiKey: string): Promise<string> {
+async function openRouterGenerate(
+  _args: Args,
+  model: string,
+  prompt: string,
+  apiKey: string,
+): Promise<string> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -137,7 +204,12 @@ async function openRouterGenerate(args: Args, model: string, prompt: string, api
   return data.choices[0]?.message.content ?? "";
 }
 
-async function generate(args: Args, model: string, prompt: string, apiKey: string | null): Promise<string> {
+async function generate(
+  args: Args,
+  model: string,
+  prompt: string,
+  apiKey: string | null,
+): Promise<string> {
   if (args.provider === "ollama") return ollamaGenerate(args, model, prompt);
   if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
   return openRouterGenerate(args, model, prompt, apiKey);
@@ -159,7 +231,9 @@ async function probeProvider(args: Args): Promise<string | null> {
           process.exit(1);
         }
       }
-      console.log(`✓ ollama up at ${args.url}, ${args.models.length} model(s) ready: ${args.models.join(", ")}`);
+      console.log(
+        `✓ ollama up at ${args.url}, ${args.models.length} model(s) ready: ${args.models.join(", ")}`,
+      );
       return null;
     } catch (e) {
       console.error(`✗ cannot reach ollama at ${args.url}: ${(e as Error).message}`);
@@ -188,7 +262,9 @@ async function probeProvider(args: Args): Promise<string | null> {
       console.error(`  (${known.size} models known to openrouter; check the slug)`);
       process.exit(1);
     }
-    console.log(`✓ openrouter reachable, ${args.models.length} model(s) verified: ${args.models.join(", ")}`);
+    console.log(
+      `✓ openrouter reachable, ${args.models.length} model(s) verified: ${args.models.join(", ")}`,
+    );
     return apiKey;
   } catch (e) {
     console.error(`✗ openrouter probe failed: ${(e as Error).message}`);
@@ -220,7 +296,10 @@ function stripMarkdownFences(s: string): string {
   return m ? m[1]! : s;
 }
 
-type ScoreFields = Omit<TrialResult, "model" | "shape" | "format" | "trial" | "rawOutput" | "durationMs">;
+type ScoreFields = Omit<
+  TrialResult,
+  "model" | "shape" | "format" | "trial" | "rawOutput" | "durationMs"
+>;
 
 function scoreRaif(raw: string, expected: JSONObject): ScoreFields {
   const tokenized = bpeEncode(raw).length;
@@ -230,7 +309,14 @@ function scoreRaif(raw: string, expected: JSONObject): ScoreFields {
   const r = decode(raw);
   const repairKinds = r.repairs.map((rp) => rp.kind);
   if (!r.ok) {
-    return { parseOk: false, parseError: r.error, fidelityOk: false, repairsApplied: r.repairs.length, repairKinds, outputTokens: tokenized };
+    return {
+      parseOk: false,
+      parseError: r.error,
+      fidelityOk: false,
+      repairsApplied: r.repairs.length,
+      repairKinds,
+      outputTokens: tokenized,
+    };
   }
   return {
     parseOk: true,
@@ -251,14 +337,34 @@ function scoreJson(raw: string, expected: JSONObject): ScoreFields {
     try {
       const parsed = JSON.parse(c);
       if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-        return { parseOk: false, parseError: "top-level is not an object", fidelityOk: false, repairsApplied: 0, repairKinds: [], outputTokens: tokenized };
+        return {
+          parseOk: false,
+          parseError: "top-level is not an object",
+          fidelityOk: false,
+          repairsApplied: 0,
+          repairKinds: [],
+          outputTokens: tokenized,
+        };
       }
-      return { parseOk: true, fidelityOk: deepEqual(parsed, expected), repairsApplied: 0, repairKinds: [], outputTokens: tokenized };
+      return {
+        parseOk: true,
+        fidelityOk: deepEqual(parsed, expected),
+        repairsApplied: 0,
+        repairKinds: [],
+        outputTokens: tokenized,
+      };
     } catch (e) {
       lastErr = (e as Error).message;
     }
   }
-  return { parseOk: false, parseError: lastErr.slice(0, 120), fidelityOk: false, repairsApplied: 0, repairKinds: [], outputTokens: tokenized };
+  return {
+    parseOk: false,
+    parseError: lastErr.slice(0, 120),
+    fidelityOk: false,
+    repairsApplied: 0,
+    repairKinds: [],
+    outputTokens: tokenized,
+  };
 }
 
 // ─── Runner ───────────────────────────────────────────────────────────
@@ -279,15 +385,22 @@ async function runTrial(
   return { model, shape: shape.name, format, trial, rawOutput: text, durationMs, ...scored };
 }
 
-async function runAll(args: Args, apiKey: string | null, partialPath: string): Promise<TrialResult[]> {
-  const targets = args.shapes
-    ? corpus.filter((c) => args.shapes!.includes(c.name))
-    : corpus;
+async function runAll(
+  args: Args,
+  apiKey: string | null,
+  partialPath: string,
+): Promise<TrialResult[]> {
+  const targets = args.shapes ? corpus.filter((c) => args.shapes!.includes(c.name)) : corpus;
   if (targets.length === 0) {
     console.error(`✗ no corpus shapes matched: ${args.shapes?.join(",")}`);
     process.exit(1);
   }
-  const queue: Array<{ model: string; shape: typeof corpus[number]; format: Format; trial: number }> = [];
+  const queue: Array<{
+    model: string;
+    shape: (typeof corpus)[number];
+    format: Format;
+    trial: number;
+  }> = [];
   for (const model of args.models) {
     for (const shape of targets) {
       for (const format of ["raif", "json"] as Format[]) {
@@ -296,6 +409,10 @@ async function runAll(args: Args, apiKey: string | null, partialPath: string): P
         }
       }
     }
+  }
+  if (queue.length === 0) {
+    console.error("✗ no trials queued (check --trials, --models, and --shapes)");
+    process.exit(1);
   }
   console.log(
     `running ${queue.length} trials (${args.models.length} model(s) × ${targets.length} shapes × 2 formats × ${args.trials} trials) @ concurrency=${args.concurrency}`,
@@ -314,26 +431,48 @@ async function runAll(args: Args, apiKey: string | null, partialPath: string): P
         runTrial(args, apiKey, item.model, item.shape, item.format, item.trial)
           .then((r) => {
             results.push(r);
-            const mark = r.fidelityOk ? "✓" : (r.parseOk ? "△" : "✗");
+            const mark = r.fidelityOk ? "✓" : r.parseOk ? "△" : "✗";
             completed++;
             const tag = r.repairsApplied > 0 ? ` [r=${r.repairsApplied}]` : "";
-            process.stdout.write(`  ${mark} [${completed}/${queue.length}] ${shortModel(r.model)} ${r.shape} ${r.format} t${r.trial}${tag}\n`);
+            process.stdout.write(
+              `  ${mark} [${completed}/${queue.length}] ${shortModel(r.model)} ${r.shape} ${r.format} t${r.trial}${tag}\n`,
+            );
           })
           .catch((e) => {
             results.push({
-              model: item.model, shape: item.shape.name, format: item.format, trial: item.trial,
-              rawOutput: "", parseOk: false, parseError: (e as Error).message,
-              fidelityOk: false, repairsApplied: 0, repairKinds: [], outputTokens: 0, durationMs: 0,
+              model: item.model,
+              shape: item.shape.name,
+              format: item.format,
+              trial: item.trial,
+              rawOutput: "",
+              parseOk: false,
+              parseError: (e as Error).message,
+              fidelityOk: false,
+              repairsApplied: 0,
+              repairKinds: [],
+              outputTokens: 0,
+              durationMs: 0,
             });
             completed++;
-            process.stdout.write(`  ✗ [${completed}/${queue.length}] ${shortModel(item.model)} ${item.shape.name} ${item.format} t${item.trial} (network)\n`);
+            process.stdout.write(
+              `  ✗ [${completed}/${queue.length}] ${shortModel(item.model)} ${item.shape.name} ${item.format} t${item.trial} (network)\n`,
+            );
           })
           .finally(() => {
             // Persist after every trial so a kill / crash never loses data.
             try {
               writeFileSync(
                 partialPath,
-                JSON.stringify({ args, runAt: new Date().toISOString(), partial: completed < queue.length, results }, null, 2),
+                JSON.stringify(
+                  {
+                    args,
+                    runAt: new Date().toISOString(),
+                    partial: completed < queue.length,
+                    results,
+                  },
+                  null,
+                  2,
+                ),
               );
             } catch (e) {
               // Don't lose the whole run over one failed checkpoint write, but
@@ -413,11 +552,23 @@ function summarize(results: TrialResult[], model: string): ModelSummary {
 }
 
 function printPerModelTable(args: Args, results: TrialResult[]): void {
-  const headers = ["model", "RAIF parse", "RAIF fid", "repair%", "JSON parse", "JSON fid", "RAIF tok", "JSON tok", "Δ tok"];
+  const headers = [
+    "model",
+    "RAIF parse",
+    "RAIF fid",
+    "repair%",
+    "JSON parse",
+    "JSON fid",
+    "RAIF tok",
+    "JSON tok",
+    "Δ tok",
+  ];
   const widths = [36, 11, 9, 8, 11, 9, 9, 9, 7];
   const sep = "─".repeat(widths.reduce((a, b) => a + b + 3, -3));
   console.log("");
-  console.log(`provider=${args.provider}  trials=${args.trials}  shapes=${args.shapes?.length ?? corpus.length}  models=${args.models.length}`);
+  console.log(
+    `provider=${args.provider}  trials=${args.trials}  shapes=${args.shapes?.length ?? corpus.length}  models=${args.models.length}`,
+  );
   console.log("");
   console.log(headers.map((h, i) => h.padEnd(widths[i]!)).join(" │ "));
   console.log(sep);
@@ -494,5 +645,8 @@ const results = await runAll(args, apiKey, runPath);
 printReport(args, results);
 // Final rewrite removes the `partial: true` marker. The API key is NOT
 // persisted — only the args object (no secrets).
-writeFileSync(runPath, JSON.stringify({ args, runAt: new Date().toISOString(), partial: false, results }, null, 2));
+writeFileSync(
+  runPath,
+  JSON.stringify({ args, runAt: new Date().toISOString(), partial: false, results }, null, 2),
+);
 console.log(`raw results saved to ${runPath}`);
