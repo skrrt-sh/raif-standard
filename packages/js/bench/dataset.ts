@@ -96,26 +96,34 @@ function parseArgs(argv: string[]): Args {
   const a: Args = { ...DEFAULTS };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!;
-    const v = argv[i + 1];
-    if (k === "--variations" && v) {
-      a.variations = parseInt(v, 10);
+    // Consume the value for a flag that takes one. A known flag with no value
+    // gets a clear "requires a value" error instead of falling through to the
+    // unknown-option branch below.
+    const want = (): string => {
+      const v = argv[i + 1];
+      if (v === undefined) {
+        console.error(`error: ${k} requires a value`);
+        process.exit(1);
+      }
       i++;
-    } else if (k === "--shapes" && v) {
-      a.shapes = v.split(",").map((s) => s.trim());
-      i++;
-    } else if (k === "--out" && v) {
-      a.outPath = v;
-      i++;
-    } else if (k === "--out-train" && v) {
-      a.outTrainPath = v;
-      i++;
-    } else if (k === "--out-eval" && v) {
-      a.outEvalPath = v;
-      i++;
-    } else if (k === "--out-holdout" && v) {
-      a.outHoldoutPath = v;
-      i++;
-    } else if (k === "--holdout-shapes" && v) {
+      return v;
+    };
+    if (k === "--variations") {
+      a.variations = parseInt(want(), 10);
+    } else if (k === "--shapes") {
+      a.shapes = want()
+        .split(",")
+        .map((s) => s.trim());
+    } else if (k === "--out") {
+      a.outPath = want();
+    } else if (k === "--out-train") {
+      a.outTrainPath = want();
+    } else if (k === "--out-eval") {
+      a.outEvalPath = want();
+    } else if (k === "--out-holdout") {
+      a.outHoldoutPath = want();
+    } else if (k === "--holdout-shapes") {
+      const v = want();
       a.holdoutShapes =
         v === "none"
           ? []
@@ -123,19 +131,14 @@ function parseArgs(argv: string[]): Args {
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean);
-      i++;
-    } else if (k === "--eval-frac" && v) {
-      a.evalFrac = parseFloat(v);
-      i++;
-    } else if (k === "--schema-frac" && v) {
-      a.schemaFrac = parseFloat(v);
-      i++;
-    } else if (k === "--seed" && v) {
-      a.seed = parseInt(v, 10);
-      i++;
-    } else if (k === "--adversarial-frac" && v) {
-      a.adversarialFrac = parseFloat(v);
-      i++;
+    } else if (k === "--eval-frac") {
+      a.evalFrac = parseFloat(want());
+    } else if (k === "--schema-frac") {
+      a.schemaFrac = parseFloat(want());
+    } else if (k === "--seed") {
+      a.seed = parseInt(want(), 10);
+    } else if (k === "--adversarial-frac") {
+      a.adversarialFrac = parseFloat(want());
     } else if (k === "--help" || k === "-h") {
       printHelp();
       process.exit(0);
