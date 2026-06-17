@@ -84,6 +84,9 @@ function parseArgs(argv: string[]): Args {
       a.concurrency = parseInt(want(), 10);
     } else if (k === "--out") {
       a.outDir = want();
+    } else if (k === "--help" || k === "-h") {
+      printUsage();
+      process.exit(0);
     } else if (k.startsWith("-")) {
       console.error(`✗ unknown option: ${k}`);
       process.exit(1);
@@ -101,7 +104,34 @@ function parseArgs(argv: string[]): Args {
     console.error("✗ --models must include at least one model id");
     process.exit(1);
   }
+  if (!Number.isInteger(a.concurrency) || a.concurrency <= 0) {
+    console.error("✗ --concurrency must be a positive integer");
+    process.exit(1);
+  }
   return a;
+}
+
+function printUsage(): void {
+  console.log(`LLM harness — re-emit corpus JSON as RAIF and JSON, then score it.
+
+Usage:
+  bun harness                                        # local Ollama, default model
+  bun harness --provider openrouter --models a,b     # remote via OpenRouter
+  bun harness --trials 5
+  bun harness --shapes short_tool_call,nested_object
+
+Flags:
+  --provider <ollama|openrouter>   inference backend (default: ollama)
+  --models <a,b,…>                 comma-separated model ids
+  --trials <n>                     trials per shape (positive int, default: 3)
+  --shapes <a,b,…>                 restrict to these corpus shapes (default: all)
+  --concurrency <n>                in-flight requests (positive int, default: 3)
+  --url <url>                      Ollama base URL (default: http://localhost:11434)
+  --out <dir>                      output dir for raw run JSON (default: harness_runs)
+  -h, --help                       show this help
+
+Env:
+  OPENROUTER_API_KEY=…             required for --provider openrouter`);
 }
 
 // ─── Provider clients ─────────────────────────────────────────────────
