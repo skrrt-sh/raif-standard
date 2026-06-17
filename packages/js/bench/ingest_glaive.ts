@@ -22,8 +22,8 @@
 // Determinism: every arguments object is seeded from a hash of its canonical
 // JSON, so the same inputs always render the same examples.
 
-import { encode, decode, type JSONObject, type JSONValue } from "../src/raif.ts";
-import { renderExample, makeRng, hashString, writeJsonl, type Example } from "./dataset.ts";
+import { decode, encode, type JSONObject, type JSONValue } from "../src/raif.ts";
+import { type Example, hashString, makeRng, renderExample, writeJsonl } from "./dataset.ts";
 
 const DATASET = "glaiveai/glaive-function-calling-v2";
 const SOURCE_TAG = "glaive-fc-v2";
@@ -33,15 +33,15 @@ const PAGE = 100; // datasets-server max length per request
 interface Args {
   pages: number;
   concurrency: number;
-  cache: string | null;     // raw extracted-args JSONL (one object per line)
+  cache: string | null; // raw extracted-args JSONL (one object per line)
   noFetch: boolean;
-  file: string | null;      // local JSON-array file ({system,chat}[]) — CDN download, no rate limit
+  file: string | null; // local JSON-array file ({system,chat}[]) — CDN download, no rate limit
   outTrain: string;
   outValid: string;
   validN: number;
   schemaFrac: number;
   minLeaves: number;
-  max: number;          // cap on kept examples (0 = no cap) — controls the real:synthetic ratio
+  max: number; // cap on kept examples (0 = no cap) — controls the real:synthetic ratio
   seed: number;
 }
 
@@ -56,30 +56,56 @@ const DEFAULTS: Args = {
   validN: 5,
   schemaFrac: 0.7,
   minLeaves: 1,
-  max: 2285,   // ≈ 60/40 real:synthetic against the 1520-example synthetic train
+  max: 2285, // ≈ 60/40 real:synthetic against the 1520-example synthetic train
   seed: 0,
 };
 
 function parseArgs(argv: string[]): Args {
   const a: Args = { ...DEFAULTS };
   for (let i = 0; i < argv.length; i++) {
-    const k = argv[i]!, v = argv[i + 1];
-    if (k === "--pages" && v) { a.pages = parseInt(v, 10); i++; }
-    else if (k === "--concurrency" && v) { a.concurrency = parseInt(v, 10); i++; }
-    else if (k === "--cache" && v) { a.cache = v; i++; }
-    else if (k === "--no-fetch") { a.noFetch = true; }
-    else if (k === "--file" && v) { a.file = v; i++; }
-    else if (k === "--out-train" && v) { a.outTrain = v; i++; }
-    else if (k === "--out-valid" && v) { a.outValid = v; i++; }
-    else if (k === "--valid-n" && v) { a.validN = parseInt(v, 10); i++; }
-    else if (k === "--schema-frac" && v) { a.schemaFrac = parseFloat(v); i++; }
-    else if (k === "--min-leaves" && v) { a.minLeaves = parseInt(v, 10); i++; }
-    else if (k === "--max" && v) { a.max = parseInt(v, 10); i++; }
-    else if (k === "--seed" && v) { a.seed = parseInt(v, 10); i++; }
-    else if (k === "--help" || k === "-h") {
-      console.log("bun run src/ingest_glaive.ts [--pages N] [--concurrency N] "
-        + "[--cache PATH] [--no-fetch] [--out-train PATH] [--out-valid PATH] "
-        + "[--valid-n N] [--schema-frac F] [--min-leaves N] [--seed N]");
+    const k = argv[i]!,
+      v = argv[i + 1];
+    if (k === "--pages" && v) {
+      a.pages = parseInt(v, 10);
+      i++;
+    } else if (k === "--concurrency" && v) {
+      a.concurrency = parseInt(v, 10);
+      i++;
+    } else if (k === "--cache" && v) {
+      a.cache = v;
+      i++;
+    } else if (k === "--no-fetch") {
+      a.noFetch = true;
+    } else if (k === "--file" && v) {
+      a.file = v;
+      i++;
+    } else if (k === "--out-train" && v) {
+      a.outTrain = v;
+      i++;
+    } else if (k === "--out-valid" && v) {
+      a.outValid = v;
+      i++;
+    } else if (k === "--valid-n" && v) {
+      a.validN = parseInt(v, 10);
+      i++;
+    } else if (k === "--schema-frac" && v) {
+      a.schemaFrac = parseFloat(v);
+      i++;
+    } else if (k === "--min-leaves" && v) {
+      a.minLeaves = parseInt(v, 10);
+      i++;
+    } else if (k === "--max" && v) {
+      a.max = parseInt(v, 10);
+      i++;
+    } else if (k === "--seed" && v) {
+      a.seed = parseInt(v, 10);
+      i++;
+    } else if (k === "--help" || k === "-h") {
+      console.log(
+        "bun run src/ingest_glaive.ts [--pages N] [--concurrency N] " +
+          "[--cache PATH] [--no-fetch] [--out-train PATH] [--out-valid PATH] " +
+          "[--valid-n N] [--schema-frac F] [--min-leaves N] [--seed N]",
+      );
       process.exit(0);
     }
   }
@@ -94,12 +120,16 @@ function canon(v: JSONValue): string {
   if (v === null || typeof v !== "object") return JSON.stringify(v);
   if (Array.isArray(v)) return `[${v.map(canon).join(",")}]`;
   const o = v as JSONObject;
-  return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${canon(o[k]!)}`).join(",")}}`;
+  return `{${Object.keys(o)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${canon(o[k]!)}`)
+    .join(",")}}`;
 }
 
 function countLeaves(v: JSONValue): number {
   if (v === null || typeof v !== "object") return 1;
-  if (Array.isArray(v)) return v.length === 0 ? 1 : v.reduce((s: number, e) => s + countLeaves(e), 0);
+  if (Array.isArray(v))
+    return v.length === 0 ? 1 : v.reduce((s: number, e) => s + countLeaves(e), 0);
   const o = v as JSONObject;
   const ks = Object.keys(o);
   return ks.length === 0 ? 1 : ks.reduce((s: number, k) => s + countLeaves(o[k]!), 0);
@@ -111,8 +141,7 @@ function countLeaves(v: JSONValue): number {
 function extractArgObjects(chat: string): JSONObject[] {
   const out: JSONObject[] = [];
   const callRe = /<functioncall>\s*([\s\S]*?)(?:<\|endoftext\|>|$)/g;
-  let m: RegExpExecArray | null;
-  while ((m = callRe.exec(chat)) !== null) {
+  for (let m = callRe.exec(chat); m !== null; m = callRe.exec(chat)) {
     const blob = m[1]!.trim();
     // arguments wrapped in single quotes (the common Glaive form), greedy to the
     // last `'}` so apostrophes inside values don't truncate the capture.
@@ -128,17 +157,20 @@ function extractArgObjects(chat: string): JSONObject[] {
     try {
       const obj = JSON.parse(argsText);
       if (obj && typeof obj === "object" && !Array.isArray(obj)) out.push(obj as JSONObject);
-    } catch { /* malformed — skip */ }
+    } catch {
+      /* malformed — skip */
+    }
   }
   return out;
 }
 
 async function fetchPage(offset: number): Promise<string[]> {
-  const url = `${SERVER}?dataset=${encodeURIComponent(DATASET)}&config=default`
-    + `&split=train&offset=${offset}&length=${PAGE}`;
+  const url =
+    `${SERVER}?dataset=${encodeURIComponent(DATASET)}&config=default` +
+    `&split=train&offset=${offset}&length=${PAGE}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`fetch ${offset} -> HTTP ${res.status}`);
-  const body = await res.json() as { rows: { row: { chat: string } }[] };
+  const body = (await res.json()) as { rows: { row: { chat: string } }[] };
   return body.rows.map((r) => r.row.chat ?? "");
 }
 
@@ -156,20 +188,30 @@ async function pulled(args: Args): Promise<JSONObject[]> {
   // Reuse a cache of raw arg objects if asked — avoids re-hitting the API.
   if (args.cache && args.noFetch) {
     const text = await Bun.file(args.cache).text();
-    return text.trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+    return text
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => JSON.parse(l));
   }
   const offsets = Array.from({ length: args.pages }, (_, i) => i * PAGE);
   const objs: JSONObject[] = [];
   let errors = 0;
   for (let i = 0; i < offsets.length; i += args.concurrency) {
     const batch = offsets.slice(i, i + args.concurrency);
-    const chatsPerPage = await Promise.all(batch.map((o) => fetchPage(o).catch((e) => {
-      errors++;
-      return [] as string[];
-    })));
+    const chatsPerPage = await Promise.all(
+      batch.map((o) =>
+        fetchPage(o).catch((_e) => {
+          errors++;
+          return [] as string[];
+        }),
+      ),
+    );
     for (const chats of chatsPerPage)
       for (const chat of chats) objs.push(...extractArgObjects(chat));
-    process.stderr.write(`\r  fetched ${Math.min(i + args.concurrency, offsets.length)}/${offsets.length} pages, ${objs.length} raw args (${errors} page errors)`);
+    process.stderr.write(
+      `\r  fetched ${Math.min(i + args.concurrency, offsets.length)}/${offsets.length} pages, ${objs.length} raw args (${errors} page errors)`,
+    );
     // Gentle throttle so the datasets-server doesn't rate-limit a long pull.
     await new Promise((res) => setTimeout(res, 150));
   }
@@ -179,13 +221,13 @@ async function pulled(args: Args): Promise<JSONObject[]> {
   // publishes a partial corpus. Retry with lower --concurrency or fewer --pages.
   if (errors > 0) {
     throw new Error(
-      `${errors}/${offsets.length} pages failed — likely rate-limited; `
-      + `aborting to avoid caching or writing a partial corpus. `
-      + `Retry with lower --concurrency or fewer --pages.`,
+      `${errors}/${offsets.length} pages failed — likely rate-limited; ` +
+        `aborting to avoid caching or writing a partial corpus. ` +
+        `Retry with lower --concurrency or fewer --pages.`,
     );
   }
   if (args.cache && objs.length > 0) {
-    await Bun.write(args.cache, objs.map((o) => JSON.stringify(o)).join("\n") + "\n");
+    await Bun.write(args.cache, `${objs.map((o) => JSON.stringify(o)).join("\n")}\n`);
     console.log(`  cached ${objs.length} raw args to ${args.cache}`);
   }
   return objs;
@@ -200,12 +242,23 @@ async function main(): Promise<void> {
   // Dedupe by canonical JSON (real data repeats common args heavily).
   const seen = new Set<string>();
   const unique: JSONObject[] = [];
-  let dropEmpty = 0, dropSmall = 0, dropDup = 0;
+  let dropEmpty = 0,
+    dropSmall = 0,
+    dropDup = 0;
   for (const obj of raw) {
-    if (Object.keys(obj).length === 0) { dropEmpty++; continue; }
-    if (countLeaves(obj) < args.minLeaves) { dropSmall++; continue; }
+    if (Object.keys(obj).length === 0) {
+      dropEmpty++;
+      continue;
+    }
+    if (countLeaves(obj) < args.minLeaves) {
+      dropSmall++;
+      continue;
+    }
     const c = canon(obj);
-    if (seen.has(c)) { dropDup++; continue; }
+    if (seen.has(c)) {
+      dropDup++;
+      continue;
+    }
     seen.add(c);
     unique.push(obj);
   }
@@ -227,12 +280,17 @@ async function main(): Promise<void> {
     try {
       const dec = decode(encode(obj, { profile: "generation" }));
       ok = dec.ok && canon(dec.value as JSONValue) === c;
-    } catch { ok = false; }
-    if (ok) kept.push(obj); else dropRoundTrip++;
+    } catch {
+      ok = false;
+    }
+    if (ok) kept.push(obj);
+    else dropRoundTrip++;
   }
 
-  console.log(`raw args: ${raw.length}  →  unique ${unique.length}  →  kept ${kept.length}  `
-    + `(dropped: empty ${dropEmpty}, tiny ${dropSmall}, dup ${dropDup}, no-round-trip ${dropRoundTrip}; cap ${cap})`);
+  console.log(
+    `raw args: ${raw.length}  →  unique ${unique.length}  →  kept ${kept.length}  ` +
+      `(dropped: empty ${dropEmpty}, tiny ${dropSmall}, dup ${dropDup}, no-round-trip ${dropRoundTrip}; cap ${cap})`,
+  );
 
   // Render via the shared synthetic path so form is identical. Seed per object
   // from its canonical hash → fully deterministic.
@@ -240,7 +298,9 @@ async function main(): Promise<void> {
     const seed = args.seed + hashString(canon(obj));
     const r = makeRng(seed);
     return renderExample(obj, r, args.schemaFrac, {
-      shape: "real_glaive", variation_seed: seed, mode: "normal",
+      shape: "real_glaive",
+      variation_seed: seed,
+      mode: "normal",
       source_dataset: SOURCE_TAG,
     });
   });

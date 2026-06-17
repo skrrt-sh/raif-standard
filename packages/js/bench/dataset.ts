@@ -37,24 +37,24 @@
 // inline for eval/debugging (`source` lets checkers verify prompt↔completion
 // fidelity without running the decoder).
 
-import { encode, type JSONObject, type JSONValue } from "../src/raif.ts";
-import { writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { encode, type JSONObject, type JSONValue } from "../src/raif.ts";
 
 // ─── CLI args ────────────────────────────────────────────────────────────
 
 interface Args {
   variations: number;
   shapes: string[] | null;
-  outPath: string | null;     // single-file mode
+  outPath: string | null; // single-file mode
   outTrainPath: string | null; // split mode
   outEvalPath: string | null;
-  outHoldoutPath: string;      // held-out-shape examples land here, never in train
-  holdoutShapes: string[];     // shapes withheld from training entirely (plan §3.4)
+  outHoldoutPath: string; // held-out-shape examples land here, never in train
+  holdoutShapes: string[]; // shapes withheld from training entirely (plan §3.4)
   evalFrac: number;
-  schemaFrac: number;          // probability that a translate example carries a <schema> block
+  schemaFrac: number; // probability that a translate example carries a <schema> block
   seed: number;
-  adversarialFrac: number;     // probability that a hard-shape example uses adversarial mode
+  adversarialFrac: number; // probability that a hard-shape example uses adversarial mode
 }
 
 // Plan §3.4 — shapes withheld from training to measure generalization.
@@ -97,24 +97,52 @@ function parseArgs(argv: string[]): Args {
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!;
     const v = argv[i + 1];
-    if (k === "--variations" && v) { a.variations = parseInt(v, 10); i++; }
-    else if (k === "--shapes" && v) { a.shapes = v.split(",").map((s) => s.trim()); i++; }
-    else if (k === "--out" && v) { a.outPath = v; i++; }
-    else if (k === "--out-train" && v) { a.outTrainPath = v; i++; }
-    else if (k === "--out-eval" && v) { a.outEvalPath = v; i++; }
-    else if (k === "--out-holdout" && v) { a.outHoldoutPath = v; i++; }
-    else if (k === "--holdout-shapes" && v) {
-      a.holdoutShapes = v === "none" ? [] : v.split(",").map((s) => s.trim()).filter(Boolean);
+    if (k === "--variations" && v) {
+      a.variations = parseInt(v, 10);
       i++;
+    } else if (k === "--shapes" && v) {
+      a.shapes = v.split(",").map((s) => s.trim());
+      i++;
+    } else if (k === "--out" && v) {
+      a.outPath = v;
+      i++;
+    } else if (k === "--out-train" && v) {
+      a.outTrainPath = v;
+      i++;
+    } else if (k === "--out-eval" && v) {
+      a.outEvalPath = v;
+      i++;
+    } else if (k === "--out-holdout" && v) {
+      a.outHoldoutPath = v;
+      i++;
+    } else if (k === "--holdout-shapes" && v) {
+      a.holdoutShapes =
+        v === "none"
+          ? []
+          : v
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+      i++;
+    } else if (k === "--eval-frac" && v) {
+      a.evalFrac = parseFloat(v);
+      i++;
+    } else if (k === "--schema-frac" && v) {
+      a.schemaFrac = parseFloat(v);
+      i++;
+    } else if (k === "--seed" && v) {
+      a.seed = parseInt(v, 10);
+      i++;
+    } else if (k === "--adversarial-frac" && v) {
+      a.adversarialFrac = parseFloat(v);
+      i++;
+    } else if (k === "--help" || k === "-h") {
+      printHelp();
+      process.exit(0);
     }
-    else if (k === "--eval-frac" && v) { a.evalFrac = parseFloat(v); i++; }
-    else if (k === "--schema-frac" && v) { a.schemaFrac = parseFloat(v); i++; }
-    else if (k === "--seed" && v) { a.seed = parseInt(v, 10); i++; }
-    else if (k === "--adversarial-frac" && v) { a.adversarialFrac = parseFloat(v); i++; }
-    else if (k === "--help" || k === "-h") { printHelp(); process.exit(0); }
   }
   if ((a.outTrainPath || a.outEvalPath) && a.outPath === DEFAULTS.outPath) {
-    a.outPath = null;  // split mode overrides single-file default
+    a.outPath = null; // split mode overrides single-file default
   }
   // Fractions are probabilities — reject out-of-range values instead of letting
   // `chance(r, frac)` silently saturate (e.g. --schema-frac 2 → always true).
@@ -151,7 +179,7 @@ function printHelp(): void {
 export function makeRng(seed: number): () => number {
   let s = seed | 0;
   return () => {
-    s = (s + 0x6D2B79F5) | 0;
+    s = (s + 0x6d2b79f5) | 0;
     let t = s;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -188,43 +216,180 @@ function chance(r: () => number, p: number): boolean {
 
 const FIELD_NAMES = [
   // identity / addressing
-  "to", "from", "cc", "bcc", "recipient", "sender", "user", "owner", "author",
-  "actor", "subject_id", "target", "source", "destination",
+  "to",
+  "from",
+  "cc",
+  "bcc",
+  "recipient",
+  "sender",
+  "user",
+  "owner",
+  "author",
+  "actor",
+  "subject_id",
+  "target",
+  "source",
+  "destination",
   // status / state
-  "status", "state", "phase", "stage", "kind", "type", "category", "tier", "level",
-  "active", "enabled", "verified", "approved", "published", "deleted", "archived",
-  "completed", "failed", "pending", "ready",
+  "status",
+  "state",
+  "phase",
+  "stage",
+  "kind",
+  "type",
+  "category",
+  "tier",
+  "level",
+  "active",
+  "enabled",
+  "verified",
+  "approved",
+  "published",
+  "deleted",
+  "archived",
+  "completed",
+  "failed",
+  "pending",
+  "ready",
   // identifiers
-  "id", "uuid", "key", "code", "slug", "handle", "token", "session_id",
-  "request_id", "trace_id", "correlation_id", "transaction_id", "order_id",
-  "user_id", "account_id", "tenant_id", "project_id", "team_id",
+  "id",
+  "uuid",
+  "key",
+  "code",
+  "slug",
+  "handle",
+  "token",
+  "session_id",
+  "request_id",
+  "trace_id",
+  "correlation_id",
+  "transaction_id",
+  "order_id",
+  "user_id",
+  "account_id",
+  "tenant_id",
+  "project_id",
+  "team_id",
   // content
-  "title", "name", "label", "description", "summary", "body", "content", "text",
-  "message", "note", "comment", "remark", "caption", "headline",
+  "title",
+  "name",
+  "label",
+  "description",
+  "summary",
+  "body",
+  "content",
+  "text",
+  "message",
+  "note",
+  "comment",
+  "remark",
+  "caption",
+  "headline",
   // counts / measures
-  "count", "total", "sum", "size", "length", "qty", "amount", "price",
-  "score", "rank", "weight", "ratio", "rate", "limit", "offset", "depth",
+  "count",
+  "total",
+  "sum",
+  "size",
+  "length",
+  "qty",
+  "amount",
+  "price",
+  "score",
+  "rank",
+  "weight",
+  "ratio",
+  "rate",
+  "limit",
+  "offset",
+  "depth",
   // time
-  "created_at", "updated_at", "deleted_at", "scheduled_at", "expires_at",
-  "started_at", "finished_at", "timestamp", "date", "time", "duration",
+  "created_at",
+  "updated_at",
+  "deleted_at",
+  "scheduled_at",
+  "expires_at",
+  "started_at",
+  "finished_at",
+  "timestamp",
+  "date",
+  "time",
+  "duration",
   // grouping
-  "tags", "labels", "categories", "items", "rows", "records", "entries",
-  "events", "actions", "logs", "messages", "results", "data", "payload",
+  "tags",
+  "labels",
+  "categories",
+  "items",
+  "rows",
+  "records",
+  "entries",
+  "events",
+  "actions",
+  "logs",
+  "messages",
+  "results",
+  "data",
+  "payload",
   // meta
-  "metadata", "meta", "extra", "config", "options", "settings", "params",
-  "context", "info", "details", "attributes", "properties",
+  "metadata",
+  "meta",
+  "extra",
+  "config",
+  "options",
+  "settings",
+  "params",
+  "context",
+  "info",
+  "details",
+  "attributes",
+  "properties",
   // contact
-  "email", "phone", "address", "url", "link", "href", "endpoint",
+  "email",
+  "phone",
+  "address",
+  "url",
+  "link",
+  "href",
+  "endpoint",
   // money / commerce
-  "currency", "price_usd", "subtotal", "tax", "discount", "shipping",
-  "invoice_number", "purchase_order", "stripe_id",
+  "currency",
+  "price_usd",
+  "subtotal",
+  "tax",
+  "discount",
+  "shipping",
+  "invoice_number",
+  "purchase_order",
+  "stripe_id",
   // tech
-  "host", "port", "protocol", "method", "path", "query", "headers", "cookies",
-  "version", "branch", "commit", "build", "release", "environment",
+  "host",
+  "port",
+  "protocol",
+  "method",
+  "path",
+  "query",
+  "headers",
+  "cookies",
+  "version",
+  "branch",
+  "commit",
+  "build",
+  "release",
+  "environment",
   // people-ish
-  "first_name", "last_name", "username", "display_name", "avatar", "role",
+  "first_name",
+  "last_name",
+  "username",
+  "display_name",
+  "avatar",
+  "role",
   // generic
-  "value", "field", "result", "output", "input", "response", "request",
+  "value",
+  "field",
+  "result",
+  "output",
+  "input",
+  "response",
+  "request",
 ] as const;
 
 // Value pools are generated combinatorially from small word lists so the
@@ -232,30 +397,134 @@ const FIELD_NAMES = [
 // of literals. All generation below is deterministic (no RNG at module load).
 
 const PLAIN_WORDS = [
-  "ok", "ready", "pending", "active", "inactive", "draft", "published", "archived",
-  "high", "low", "medium", "urgent", "normal", "critical", "minor", "major",
-  "billing", "shipping", "support", "ops", "engineering", "design", "marketing",
-  "admin", "viewer", "editor", "owner", "guest", "member", "moderator",
-  "pricing", "checkout", "signup", "login", "logout", "settings", "profile",
-  "dashboard", "reports", "analytics", "users", "teams", "projects",
-  "click", "view", "submit", "scroll", "hover", "swipe", "tap",
-  "north", "south", "east", "west", "up", "down", "left", "right",
-  "blue", "red", "green", "yellow", "purple", "orange",
-  "monday", "tuesday", "wednesday", "thursday", "friday",
-  "api", "web", "mobile", "desktop", "embed",
+  "ok",
+  "ready",
+  "pending",
+  "active",
+  "inactive",
+  "draft",
+  "published",
+  "archived",
+  "high",
+  "low",
+  "medium",
+  "urgent",
+  "normal",
+  "critical",
+  "minor",
+  "major",
+  "billing",
+  "shipping",
+  "support",
+  "ops",
+  "engineering",
+  "design",
+  "marketing",
+  "admin",
+  "viewer",
+  "editor",
+  "owner",
+  "guest",
+  "member",
+  "moderator",
+  "pricing",
+  "checkout",
+  "signup",
+  "login",
+  "logout",
+  "settings",
+  "profile",
+  "dashboard",
+  "reports",
+  "analytics",
+  "users",
+  "teams",
+  "projects",
+  "click",
+  "view",
+  "submit",
+  "scroll",
+  "hover",
+  "swipe",
+  "tap",
+  "north",
+  "south",
+  "east",
+  "west",
+  "up",
+  "down",
+  "left",
+  "right",
+  "blue",
+  "red",
+  "green",
+  "yellow",
+  "purple",
+  "orange",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "api",
+  "web",
+  "mobile",
+  "desktop",
+  "embed",
 ] as const;
 
 const ADJECTIVES = [
-  "amber", "bold", "calm", "crisp", "dusty", "eager", "fancy", "gentle",
-  "hazel", "ivory", "jolly", "keen", "lively", "mellow", "noble", "olive",
-  "plain", "quiet", "rustic", "silver", "tidy", "upbeat", "vivid", "witty",
+  "amber",
+  "bold",
+  "calm",
+  "crisp",
+  "dusty",
+  "eager",
+  "fancy",
+  "gentle",
+  "hazel",
+  "ivory",
+  "jolly",
+  "keen",
+  "lively",
+  "mellow",
+  "noble",
+  "olive",
+  "plain",
+  "quiet",
+  "rustic",
+  "silver",
+  "tidy",
+  "upbeat",
+  "vivid",
+  "witty",
 ] as const;
 
 const NOUNS = [
-  "falcon", "harbor", "ledger", "meadow", "beacon", "canyon", "drift",
-  "ember", "forge", "glacier", "hollow", "inlet", "kernel", "lantern",
-  "marble", "nectar", "orchid", "pylon", "quartz", "ridge", "summit",
-  "thicket", "valley", "willow",
+  "falcon",
+  "harbor",
+  "ledger",
+  "meadow",
+  "beacon",
+  "canyon",
+  "drift",
+  "ember",
+  "forge",
+  "glacier",
+  "hollow",
+  "inlet",
+  "kernel",
+  "lantern",
+  "marble",
+  "nectar",
+  "orchid",
+  "pylon",
+  "quartz",
+  "ridge",
+  "summit",
+  "thicket",
+  "valley",
+  "willow",
 ] as const;
 
 // ~70 plain words + 24×24 adjective-noun combos = 646 short strings.
@@ -265,15 +534,54 @@ const SHORT_STRINGS: readonly string[] = [
 ];
 
 const FIRST_NAMES = [
-  "alice", "bob", "carol", "dave", "eve", "egor", "alex", "sam", "jordan",
-  "maria", "ivan", "nina", "oscar", "priya", "quinn", "ravi", "sofia",
-  "tomas", "uma", "viktor", "wendy", "yusuf", "zoe", "lena", "marco",
-  "noah", "olga", "pavel", "rosa", "stefan",
+  "alice",
+  "bob",
+  "carol",
+  "dave",
+  "eve",
+  "egor",
+  "alex",
+  "sam",
+  "jordan",
+  "maria",
+  "ivan",
+  "nina",
+  "oscar",
+  "priya",
+  "quinn",
+  "ravi",
+  "sofia",
+  "tomas",
+  "uma",
+  "viktor",
+  "wendy",
+  "yusuf",
+  "zoe",
+  "lena",
+  "marco",
+  "noah",
+  "olga",
+  "pavel",
+  "rosa",
+  "stefan",
 ] as const;
 
 const LAST_NAMES = [
-  "reyes", "kim", "novak", "silva", "haas", "okafor", "lindqvist", "tanaka",
-  "moreau", "petrov", "garcia", "walsh", "ferrara", "nguyen", "kowalski",
+  "reyes",
+  "kim",
+  "novak",
+  "silva",
+  "haas",
+  "okafor",
+  "lindqvist",
+  "tanaka",
+  "moreau",
+  "petrov",
+  "garcia",
+  "walsh",
+  "ferrara",
+  "nguyen",
+  "kowalski",
 ] as const;
 
 // 30 bare first names + 30×15 first.last combos = 480 names.
@@ -283,33 +591,64 @@ const NAMES: readonly string[] = [
 ];
 
 const SENT_SUBJECTS = [
-  "the invoice", "the report", "your order", "the deployment", "the migration",
-  "the backup", "the meeting", "your account", "the request", "the cache",
-  "the build", "the export", "the booking", "the rollout", "the audit",
+  "the invoice",
+  "the report",
+  "your order",
+  "the deployment",
+  "the migration",
+  "the backup",
+  "the meeting",
+  "your account",
+  "the request",
+  "the cache",
+  "the build",
+  "the export",
+  "the booking",
+  "the rollout",
+  "the audit",
 ] as const;
 
 const SENT_PREDICATES = [
-  "is ready for review", "has been updated", "completed successfully",
-  "was queued for processing", "requires no further action",
-  "has been archived", "is now available", "was approved by the team",
-  "failed and will be retried", "is scheduled for tonight",
-  "was flagged for follow-up", "has been confirmed",
+  "is ready for review",
+  "has been updated",
+  "completed successfully",
+  "was queued for processing",
+  "requires no further action",
+  "has been archived",
+  "is now available",
+  "was approved by the team",
+  "failed and will be retried",
+  "is scheduled for tonight",
+  "was flagged for follow-up",
+  "has been confirmed",
 ] as const;
 
 // 15×12 = 180 sentence fragments.
-const SENTENCE_FRAGMENTS: readonly string[] =
-  SENT_SUBJECTS.flatMap((s) => SENT_PREDICATES.map((p) => `${s} ${p}`));
+const SENTENCE_FRAGMENTS: readonly string[] = SENT_SUBJECTS.flatMap((s) =>
+  SENT_PREDICATES.map((p) => `${s} ${p}`),
+);
 
 const DOMAIN_WORDS = [
-  "example", "acme", "globex", "initech", "umbrella", "hooli", "stark",
-  "wayne", "wonka", "cyberdyne", "aperture", "tyrell", "northwind", "contoso",
+  "example",
+  "acme",
+  "globex",
+  "initech",
+  "umbrella",
+  "hooli",
+  "stark",
+  "wayne",
+  "wonka",
+  "cyberdyne",
+  "aperture",
+  "tyrell",
+  "northwind",
+  "contoso",
 ] as const;
 
 const TLDS = ["com", "io", "co", "org", "dev", "net"] as const;
 
 // 14×6 = 84 email domains.
-const EMAIL_DOMAINS: readonly string[] =
-  DOMAIN_WORDS.flatMap((w) => TLDS.map((t) => `${w}.${t}`));
+const EMAIL_DOMAINS: readonly string[] = DOMAIN_WORDS.flatMap((w) => TLDS.map((t) => `${w}.${t}`));
 
 function makeEmail(r: () => number, name?: string): string {
   const n = name ?? pick(r, NAMES);
@@ -317,10 +656,18 @@ function makeEmail(r: () => number, name?: string): string {
   return `${n}@${d}`;
 }
 
-function makeUrl(r: () => number): string {
+function _makeUrl(r: () => number): string {
   const proto = pick(r, ["https", "http"]);
   const host = `${pick(r, SHORT_STRINGS)}.${pick(r, ["com", "io", "dev", "org"])}`;
-  const path = pick(r, ["/api/v1/users", "/login", "/dashboard", "/healthz", "/", "/checkout", "/items"]);
+  const path = pick(r, [
+    "/api/v1/users",
+    "/login",
+    "/dashboard",
+    "/healthz",
+    "/",
+    "/checkout",
+    "/items",
+  ]);
   return `${proto}://${host}${path}`;
 }
 
@@ -335,7 +682,8 @@ function makeSentence(r: () => number): string {
 function makeLongText(r: () => number, lines: number): string {
   const parts: string[] = [];
   for (let i = 0; i < lines; i++) {
-    if (chance(r, 0.2)) parts.push("");  // blank line for paragraph break
+    if (chance(r, 0.2))
+      parts.push(""); // blank line for paragraph break
     else parts.push(`${pick(r, SENTENCE_FRAGMENTS)}.`);
   }
   return parts.join("\n");
@@ -416,7 +764,8 @@ const variators: Record<string, Variator> = {
         [queryF!]: `a=${intIn(r, 1, 9)},b=${intIn(r, 1, 9)}`,
         [slugF!]: pick(r, ["my name", "long-slug-here", "hello world"]),
       },
-      description: "Compose an object whose string values contain quotes, braces, commas, equals signs.",
+      description:
+        "Compose an object whose string values contain quotes, braces, commas, equals signs.",
     };
   },
 
@@ -426,7 +775,7 @@ const variators: Record<string, Variator> = {
     let body = makeLongText(r, lines);
     if (mode === "adversarial" && chance(r, 0.3)) {
       // Insert a literal `>>>` content line — forces nonce-bounded form.
-      body = body + "\n>>>\nfollowed by more text";
+      body = `${body}\n>>>\nfollowed by more text`;
     }
     return {
       json: {
@@ -455,8 +804,13 @@ const variators: Record<string, Variator> = {
     const json: JSONObject = {};
     for (let i = 0; i < n; i++) {
       const k = pick(r, [
-        "user.email", "items[0]", "data.user.id", "tags[]", "meta.has_more",
-        "config[default]", "stats.p50.latency",
+        "user.email",
+        "items[0]",
+        "data.user.id",
+        "tags[]",
+        "meta.has_more",
+        "config[default]",
+        "stats.p50.latency",
       ]);
       json[k] = pick(r, [makeShortString(r), makeEmail(r), intIn(r, 1, 100)]) as JSONValue;
     }
@@ -465,14 +819,18 @@ const variators: Record<string, Variator> = {
     for (const k of pickFieldNames(r, normalCount)) {
       json[k] = makeShortString(r);
     }
-    return { json, description: "Compose an object whose keys contain `.`, `[`, or `]` characters." };
+    return {
+      json,
+      description: "Compose an object whose keys contain `.`, `[`, or `]` characters.",
+    };
   },
 
   numeric_string_ambiguity: (r, mode) => {
     // Strings that LOOK like JSON literals.
-    const candidates = mode === "adversarial"
-      ? ["02134", "true", "false", "null", "42", "3.14", "-7", "0", "[]", "{}"]
-      : ["02134", "true", "null", "42"];
+    const candidates =
+      mode === "adversarial"
+        ? ["02134", "true", "false", "null", "42", "3.14", "-7", "0", "[]", "{}"]
+        : ["02134", "true", "null", "42"];
     const stringCount = intIn(r, 2, 4);
     const json: JSONObject = {};
     for (let i = 0; i < stringCount; i++) {
@@ -484,15 +842,16 @@ const variators: Record<string, Variator> = {
     json[numF!] = intIn(r, 1, 100);
     json[boolF!] = chance(r, 0.5);
     json[nullF!] = null;
-    return { json, description: "Compose an object where some string values look like JSON literals." };
+    return {
+      json,
+      description: "Compose an object where some string values look like JSON literals.",
+    };
   },
 
   deep_nesting: (r) => {
     const depth = intIn(r, 3, 6);
     const names = pickFieldNames(r, depth);
-    const leaf: JSONValue = pick(r, [
-      makeShortString(r), intIn(r, 1, 100), chance(r, 0.5),
-    ]);
+    const leaf: JSONValue = pick(r, [makeShortString(r), intIn(r, 1, 100), chance(r, 0.5)]);
     let node: JSONValue = leaf;
     for (let i = depth - 1; i >= 0; i--) {
       node = { [names[i]!]: node };
@@ -561,7 +920,10 @@ const variators: Record<string, Variator> = {
       }
       rows.push(row);
     }
-    return { json: { [arrF!]: rows }, description: "Compose a heterogeneous array of objects with varying key sets." };
+    return {
+      json: { [arrF!]: rows },
+      description: "Compose a heterogeneous array of objects with varying key sets.",
+    };
   },
 
   literal_strings: (r) => {
@@ -573,7 +935,10 @@ const variators: Record<string, Variator> = {
     json[f4!] = "{not an object}";
     json[f5!] = "[not an array]";
     json[f6!] = `${pick(r, SHORT_STRINGS)}:${pick(r, SHORT_STRINGS)}`;
-    return { json, description: "Compose an object whose string values are literal-looking forms." };
+    return {
+      json,
+      description: "Compose an object whose string values are literal-looking forms.",
+    };
   },
 
   wide_heterogeneous_array: (r, mode) => {
@@ -595,7 +960,10 @@ const variators: Record<string, Variator> = {
       rows.push(row);
       ts += intIn(r, 1, 60);
     }
-    return { json: { [arrF!]: rows }, description: "Compose a wide heterogeneous event-log array." };
+    return {
+      json: { [arrF!]: rows },
+      description: "Compose a wide heterogeneous event-log array.",
+    };
   },
 
   flat_inline_object: (r) => {
@@ -603,11 +971,12 @@ const variators: Record<string, Variator> = {
     const inner: JSONObject = {};
     const fieldCount = intIn(r, 4, 8);
     for (const f of pickFieldNames(r, fieldCount)) {
-      inner[f] = pick(r, [
-        makeShortString(r), intIn(r, 1, 9999), chance(r, 0.5),
-      ]) as JSONValue;
+      inner[f] = pick(r, [makeShortString(r), intIn(r, 1, 9999), chance(r, 0.5)]) as JSONValue;
     }
-    return { json: { [outerF!]: inner }, description: "Compose an object with one wide, flat nested object value." };
+    return {
+      json: { [outerF!]: inner },
+      description: "Compose an object with one wide, flat nested object value.",
+    };
   },
 
   deep_array_literal: (r, mode) => {
@@ -625,7 +994,8 @@ const variators: Record<string, Variator> = {
     }
     return {
       json: { [outerF!]: { [midF!]: { [innerF!]: rows } } },
-      description: "Compose a deeply-nested object containing an array of small heterogeneous records.",
+      description:
+        "Compose a deeply-nested object containing an array of small heterogeneous records.",
     };
   },
 
@@ -638,7 +1008,10 @@ const variators: Record<string, Variator> = {
       arr.push(ts);
       ts += intIn(r, 1, 60);
     }
-    return { json: { [tsF!]: arr }, description: `Compose an object with a ${n}-element timestamp array.` };
+    return {
+      json: { [tsF!]: arr },
+      description: `Compose an object with a ${n}-element timestamp array.`,
+    };
   },
 
   // ── In-training mechanism carriers (see "Held-out balance" in the header) ──
@@ -678,10 +1051,20 @@ const variators: Record<string, Variator> = {
   // generalizes to the heavier held-out case.
   dotted_paths: (r, mode) => {
     const n = mode === "adversarial" ? intIn(r, 2, 3) : 1;
-    const wrapped = pickN(r, [
-      "user.email", "items[0]", "data.id", "tags[]", "meta.more",
-      "config.default", "a.b.c", "stats.p95",
-    ], n);
+    const wrapped = pickN(
+      r,
+      [
+        "user.email",
+        "items[0]",
+        "data.id",
+        "tags[]",
+        "meta.more",
+        "config.default",
+        "a.b.c",
+        "stats.p95",
+      ],
+      n,
+    );
     const json: JSONObject = {};
     for (const k of wrapped) {
       json[k] = pick(r, [makeShortString(r), makeEmail(r), intIn(r, 1, 100)]) as JSONValue;
@@ -689,7 +1072,10 @@ const variators: Record<string, Variator> = {
     for (const k of pickFieldNames(r, intIn(r, 2, 4))) {
       json[k] = pick(r, [makeShortString(r), intIn(r, 1, 999), chance(r, 0.5)]) as JSONValue;
     }
-    return { json, description: "Compose an object mixing a dotted/bracketed key with normal keys." };
+    return {
+      json,
+      description: "Compose an object mixing a dotted/bracketed key with normal keys.",
+    };
   },
 
   // Carrier for bracket-form arrays UNDER nesting (held-out twin:
@@ -732,19 +1118,29 @@ const variators: Record<string, Variator> = {
     const colFs = fields.slice(1);
     // Fix a type per column so every row shares an identical key set (required
     // for the encoder's table form); "opt" columns emit sparse null cells.
-    const colTypes = colFs.map((_, j) =>
-      j === 0 ? "id" : pick(r, ["s", "n", "f", "b", "opt"]));
+    const colTypes = colFs.map((_, j) => (j === 0 ? "id" : pick(r, ["s", "n", "f", "b", "opt"])));
     const rows: JSONObject[] = [];
     for (let i = 0; i < n; i++) {
       const row: JSONObject = {};
       colFs.forEach((f, j) => {
         switch (colTypes[j]) {
-          case "id": row[f!] = i + 1; break;
-          case "s": row[f!] = makeShortString(r); break;
-          case "n": row[f!] = intIn(r, 0, 9999); break;
-          case "f": row[f!] = Math.round(r() * 100000) / 100; break;
-          case "b": row[f!] = chance(r, 0.5); break;
-          default: row[f!] = chance(r, 0.65) ? makeShortString(r) : null; // sparse
+          case "id":
+            row[f!] = i + 1;
+            break;
+          case "s":
+            row[f!] = makeShortString(r);
+            break;
+          case "n":
+            row[f!] = intIn(r, 0, 9999);
+            break;
+          case "f":
+            row[f!] = Math.round(r() * 100000) / 100;
+            break;
+          case "b":
+            row[f!] = chance(r, 0.5);
+            break;
+          default:
+            row[f!] = chance(r, 0.65) ? makeShortString(r) : null; // sparse
         }
       });
       rows.push(row);
@@ -757,12 +1153,19 @@ const variators: Record<string, Variator> = {
 };
 
 const HARD_SHAPES = new Set([
-  "pathological_keys", "numeric_string_ambiguity", "heterogeneous_array",
-  "wide_heterogeneous_array", "deep_array_literal", "multiline_body",
+  "pathological_keys",
+  "numeric_string_ambiguity",
+  "heterogeneous_array",
+  "wide_heterogeneous_array",
+  "deep_array_literal",
+  "multiline_body",
   // In-training mechanism carriers — their adversarial mode is what teaches the
   // hard branch of each mechanism (nonce-bounded blocks, multi-wrapped keys,
   // deeper/wider nested arrays).
-  "record_with_note", "dotted_paths", "nested_event_log", "tabular_report",
+  "record_with_note",
+  "dotted_paths",
+  "nested_event_log",
+  "tabular_report",
 ]);
 
 // ─── Schema declaration ──────────────────────────────────────────────────
@@ -781,7 +1184,7 @@ function typeCode(v: JSONValue): string {
 }
 
 // Wrap a key segment with <<<>>> if it contains path-significant chars.
-const KEY_WRAP_TRIGGERS = /[.\[\]=:\n\r]/;
+const KEY_WRAP_TRIGGERS = /[.[\]=:\n\r]/;
 function keySegment(k: string): string {
   if (k.length === 0 || KEY_WRAP_TRIGGERS.test(k)) return `<<<${k}>>>`;
   return k;
@@ -861,7 +1264,7 @@ function walkSchema(value: JSONValue, path: string, decls: string[]): void {
   // Nested object
   const keys = Object.keys(value as JSONObject).sort();
   if (keys.length === 0) {
-    decls.push(`${path}:o`);  // empty object — still occupies the field
+    decls.push(`${path}:o`); // empty object — still occupies the field
     return;
   }
   for (const k of keys) {
@@ -935,7 +1338,10 @@ function fmtValue(v: JSONValue): string {
   return String(v);
 }
 
-interface Leaf { path: string; value: JSONValue }  // primitive, [] or {}
+interface Leaf {
+  path: string;
+  value: JSONValue;
+} // primitive, [] or {}
 
 // Collect leaves in the encoder's canonical order (sorted keys, depth-first).
 function collectLeaves(value: JSONValue, path: string, out: Leaf[]): void {
@@ -944,12 +1350,20 @@ function collectLeaves(value: JSONValue, path: string, out: Leaf[]): void {
     return;
   }
   if (Array.isArray(value)) {
-    if (value.length === 0) { out.push({ path, value }); return; }
-    value.forEach((el, i) => collectLeaves(el, `${path}[${i}]`, out));
+    if (value.length === 0) {
+      out.push({ path, value });
+      return;
+    }
+    value.forEach((el, i) => {
+      collectLeaves(el, `${path}[${i}]`, out);
+    });
     return;
   }
   const keys = Object.keys(value).sort();
-  if (keys.length === 0) { out.push({ path, value }); return; }
+  if (keys.length === 0) {
+    out.push({ path, value });
+    return;
+  }
   for (const k of keys) {
     collectLeaves((value as JSONObject)[k]!, path === "" ? k : `${path}.${k}`, out);
   }
@@ -992,7 +1406,7 @@ export interface Example {
     mode: Mode;
     task: Task;
     source: JSONObject;
-    source_dataset?: string;  // set for real-JSON examples (e.g. "glaive-fc-v2")
+    source_dataset?: string; // set for real-JSON examples (e.g. "glaive-fc-v2")
   };
 }
 
@@ -1019,9 +1433,7 @@ export function renderExample(
   if (task === "translate") {
     includeSchema = chance(r, schemaFrac);
     const req = renderTranslateRequest(r, json);
-    userContent = includeSchema
-      ? `${req}\n\n<schema>\n${declareSchema(json)}\n</schema>`
-      : req;
+    userContent = includeSchema ? `${req}\n\n<schema>\n${declareSchema(json)}\n</schema>` : req;
   } else {
     includeSchema = true;
     userContent = `${renderInstructRequest(r, json)}\n\n<schema>\n${declareSchema(json)}\n</schema>`;
@@ -1047,8 +1459,8 @@ function buildExample(shape: string, seed: number, args: Args): Example {
   const r = makeRng(seed);
   const variator = variators[shape];
   if (!variator) throw new Error(`no variator for shape: ${shape}`);
-  const mode: Mode = HARD_SHAPES.has(shape) && chance(r, args.adversarialFrac)
-    ? "adversarial" : "normal";
+  const mode: Mode =
+    HARD_SHAPES.has(shape) && chance(r, args.adversarialFrac) ? "adversarial" : "normal";
   const { json } = variator(r, mode);
   return renderExample(json, r, args.schemaFrac, { shape, variation_seed: seed, mode });
 }
@@ -1063,7 +1475,7 @@ function ensureDir(filePath: string): void {
 export function writeJsonl(path: string, examples: Example[]): void {
   ensureDir(path);
   const lines = examples.map((e) => JSON.stringify(e));
-  writeFileSync(path, lines.length > 0 ? lines.join("\n") + "\n" : "");
+  writeFileSync(path, lines.length > 0 ? `${lines.join("\n")}\n` : "");
 }
 
 function main(): void {
@@ -1116,7 +1528,9 @@ function main(): void {
       const evalCount = Math.min(n, Math.ceil(args.evalFrac * n));
       const evalIdx = new Set<number>();
       for (let j = 0; j < evalCount; j++) evalIdx.add(Math.floor((j * n) / evalCount));
-      exs.forEach((e, i) => (evalIdx.has(i) ? evalSet : trainSet).push(e));
+      exs.forEach((e, i) => {
+        (evalIdx.has(i) ? evalSet : trainSet).push(e);
+      });
     } else {
       trainSet.push(...exs);
     }
@@ -1164,7 +1578,9 @@ function main(): void {
   if (holdout.size > 0) console.log(`holdout per shape: ${shapeCounts(holdoutSet)}`);
   console.log(`per mode: ${[...byMode.entries()].map(([m, n]) => `${m}=${n}`).join(", ")}`);
   console.log(`per task: ${[...byTask.entries()].map(([t, n]) => `${t}=${n}`).join(", ")}`);
-  console.log(`with <schema> block: ${withSchema}/${all.length} (${Math.round(withSchema / all.length * 100)}%)`);
+  console.log(
+    `with <schema> block: ${withSchema}/${all.length} (${Math.round((withSchema / all.length) * 100)}%)`,
+  );
 }
 
 export function hashString(s: string): number {

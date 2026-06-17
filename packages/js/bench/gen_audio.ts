@@ -18,7 +18,10 @@ if (!cuePath || !outPath) {
 const OFFSET = offsetArg ? parseFloat(offsetArg) : 0.82;
 
 const SR = 44100;
-const sheet = JSON.parse(readFileSync(cuePath, "utf8")) as { dur: number; cues: Array<{ t: number; k: string }> };
+const sheet = JSON.parse(readFileSync(cuePath, "utf8")) as {
+  dur: number;
+  cues: Array<{ t: number; k: string }>;
+};
 const TOTAL = totalArg ? parseFloat(totalArg) : sheet.dur / 1000 + OFFSET + 2.5;
 const N = Math.ceil(TOTAL * SR);
 const buf = new Float32Array(N);
@@ -38,7 +41,7 @@ function tone(atSec: number, freq: number, durSec: number, gain: number, attack 
 }
 
 // soft bell: fundamental + two gentle partials, medium decay
-function bell(atSec: number, freq: number, gain: number, durSec = 0.7) {
+function _bell(atSec: number, freq: number, gain: number, durSec = 0.7) {
   const start = Math.floor(atSec * SR);
   const len = Math.floor(durSec * SR);
   for (let i = 0; i < len; i++) {
@@ -55,8 +58,18 @@ function bell(atSec: number, freq: number, gain: number, durSec = 0.7) {
 }
 
 // ── the melody: a gentle I-V-vi-IV arpeggio in C, soft, with a low pad ────────
-const C4 = 261.63, D5 = 587.33, E4 = 329.63, E5 = 659.25, F4 = 349.23, F5 = 698.46;
-const G4 = 392.0, G5 = 783.99, A4 = 440.0, A5 = 880.0, B4 = 493.88, C5 = 523.25;
+const C4 = 261.63,
+  D5 = 587.33,
+  E4 = 329.63,
+  E5 = 659.25,
+  F4 = 349.23,
+  F5 = 698.46;
+const G4 = 392.0,
+  G5 = 783.99,
+  A4 = 440.0,
+  A5 = 880.0,
+  B4 = 493.88,
+  C5 = 523.25;
 // each chord = four ascending chord tones to arpeggiate over
 const PROG: number[][] = [
   [C4, E4, G4, C5], // C

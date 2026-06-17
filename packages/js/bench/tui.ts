@@ -1,10 +1,10 @@
 // Throwaway TUI: pick a corpus entry, see JSON / RAIF / decoded side by side.
 // Run with: bun run tui
 
-import { encode, decode } from "../src/raif.ts";
+import { encode as bpeEncode } from "gpt-tokenizer";
+import { decode, encode } from "../src/raif.ts";
 import { corpus } from "./corpus.ts";
 import { deepEqual } from "./json_equal.ts";
-import { encode as bpeEncode } from "gpt-tokenizer";
 
 const B = "\x1b[1m";
 const D = "\x1b[2m";
@@ -54,7 +54,7 @@ function render(): void {
   console.log(`${B}decode:${RESET}`);
   if (decoded.ok) {
     const eq = deepEqual(decoded.value, json);
-    console.log(`  ${eq ? G + "round-trip ✓" : R + "round-trip ✗"}${RESET}`);
+    console.log(`  ${eq ? `${G}round-trip ✓` : `${R}round-trip ✗`}${RESET}`);
     if (!eq) {
       console.log(`  expected: ${JSON.stringify(json)}`);
       console.log(`  got:      ${JSON.stringify(decoded.value)}`);
@@ -66,7 +66,9 @@ function render(): void {
     console.log(`  ${R}decode error: ${decoded.error}${RESET}`);
   }
   console.log("");
-  console.log(`${B}tokens:${RESET}  JSON-compact: ${jTok}   RAIF: ${rTok}   ${rTok < jTok ? G : R}Δ ${delta}${RESET}`);
+  console.log(
+    `${B}tokens:${RESET}  JSON-compact: ${jTok}   RAIF: ${rTok}   ${rTok < jTok ? G : R}Δ ${delta}${RESET}`,
+  );
   console.log("");
   console.log(`${D}[n] next  [p] prev  [q] quit${RESET}`);
 }

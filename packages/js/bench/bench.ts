@@ -1,10 +1,10 @@
 // Batch benchmark: round-trip fidelity + token count comparison.
 // Run with: bun run bench
 
-import { encode, decode } from "../src/index.ts";
+import { encode as bpeEncode } from "gpt-tokenizer";
+import { decode, encode } from "../src/index.ts";
 import { corpus } from "./corpus.ts";
 import { deepEqual } from "./json_equal.ts";
-import { encode as bpeEncode } from "gpt-tokenizer";
 
 interface Row {
   name: string;
@@ -126,7 +126,9 @@ function printSummary(rows: Row[]): void {
   const totalJson = rows.reduce((s, r) => s + r.jsonCompactTokens, 0);
   const totalRaif = rows.reduce((s, r) => s + r.raifTokens, 0);
   console.log(`round-trip: ${rt}/${total}   idempotent: ${idem}/${total}`);
-  console.log(`tokens  JSON-min: ${totalJson}   RAIF: ${totalRaif}   delta: ${pct(totalRaif, totalJson)}`);
+  console.log(
+    `tokens  JSON-min: ${totalJson}   RAIF: ${totalRaif}   delta: ${pct(totalRaif, totalJson)}`,
+  );
   console.log("");
 }
 
