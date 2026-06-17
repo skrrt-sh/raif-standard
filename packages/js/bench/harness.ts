@@ -83,6 +83,14 @@ function parseArgs(argv: string[]): Args {
   if (a.provider === "openrouter" && a.models.length === 1 && a.models[0] === "qwen2.5:1.5b") {
     a.models = ["meta-llama/llama-3.1-8b-instruct"];
   }
+  if (!Number.isInteger(a.trials) || a.trials <= 0) {
+    console.error("✗ --trials must be a positive integer");
+    process.exit(1);
+  }
+  if (a.models.length === 0) {
+    console.error("✗ --models must include at least one model id");
+    process.exit(1);
+  }
   return a;
 }
 
@@ -361,6 +369,10 @@ async function runAll(
         }
       }
     }
+  }
+  if (queue.length === 0) {
+    console.error("✗ no trials queued (check --trials, --models, and --shapes)");
+    process.exit(1);
   }
   console.log(
     `running ${queue.length} trials (${args.models.length} model(s) × ${targets.length} shapes × 2 formats × ${args.trials} trials) @ concurrency=${args.concurrency}`,

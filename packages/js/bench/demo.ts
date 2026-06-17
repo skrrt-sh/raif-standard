@@ -341,15 +341,28 @@ async function slideEconomy() {
     const holdout = new URL("../../../benchmarks/holdout_realistic.jsonl", import.meta.url);
     for (const line of readFileSync(holdout, "utf8").split("\n")) {
       if (!line) continue;
-      const msgs = JSON.parse(line).messages;
-      const gold = msgs[msgs.length - 1].content as string; // gold RAIF
-      const res = decode(gold);
-      if (!res.ok) continue;
-      jsonTok += cl100k(JSON.stringify(res.value)).length;
-      raifTok += cl100k(gold).length;
-      calls++;
+      try {
+        const msgs = JSON.parse(line).messages;
+        const gold = msgs[msgs.length - 1].content as string; // gold RAIF
+        const res = decode(gold);
+        if (!res.ok) continue;
+        // Compute both counts before committing so a mid-row throw can't
+        // leave one total incremented without the other.
+        const j = cl100k(JSON.stringify(res.value)).length;
+        const r = cl100k(gold).length;
+        jsonTok += j;
+        raifTok += r;
+        calls++;
+      } catch {
+        // skip a malformed row; keep the holdout aggregation pure
+      }
     }
+    if (calls === 0) throw new Error("no valid holdout rows");
   } catch {
+    // File absent or unusable — recompute from the curated corpus on clean totals.
+    jsonTok = 0;
+    raifTok = 0;
+    calls = 0;
     for (const e of corpus) {
       jsonTok += cl100k(JSON.stringify(e.json)).length;
       raifTok += cl100k(encode(e.json)).length;
@@ -390,20 +403,38 @@ async function slideFormats() {
   let raif = 0;
   let toon = 0;
   let yaml = 0;
+  let rows = 0;
   try {
     const holdout = new URL("../../../benchmarks/holdout_realistic.jsonl", import.meta.url);
     for (const line of readFileSync(holdout, "utf8").split("\n")) {
       if (!line) continue;
-      const msgs = JSON.parse(line).messages;
-      const gold = msgs[msgs.length - 1].content as string;
-      const res = decode(gold);
-      if (!res.ok) continue;
-      json += cl100k(JSON.stringify(res.value)).length;
-      raif += cl100k(gold).length;
-      toon += cl100k(toonEncode(res.value)).length;
-      yaml += cl100k(yamlStringify(res.value).trimEnd()).length;
+      try {
+        const msgs = JSON.parse(line).messages;
+        const gold = msgs[msgs.length - 1].content as string;
+        const res = decode(gold);
+        if (!res.ok) continue;
+        // Compute all four counts before committing so a mid-row throw can't
+        // leave the totals partially updated.
+        const j = cl100k(JSON.stringify(res.value)).length;
+        const r = cl100k(gold).length;
+        const t = cl100k(toonEncode(res.value)).length;
+        const y = cl100k(yamlStringify(res.value).trimEnd()).length;
+        json += j;
+        raif += r;
+        toon += t;
+        yaml += y;
+        rows++;
+      } catch {
+        // skip a malformed row; keep the holdout aggregation pure
+      }
     }
+    if (rows === 0) throw new Error("no valid holdout rows");
   } catch {
+    // File absent or unusable — recompute from the curated corpus on clean totals.
+    json = 0;
+    raif = 0;
+    toon = 0;
+    yaml = 0;
     for (const e of corpus) {
       json += cl100k(JSON.stringify(e.json)).length;
       raif += cl100k(encode(e.json)).length;

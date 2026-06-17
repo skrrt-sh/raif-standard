@@ -103,8 +103,8 @@ function parseArgs(argv: string[]): Args {
     } else if (k === "--help" || k === "-h") {
       console.log(
         "bun run src/ingest_glaive.ts [--pages N] [--concurrency N] " +
-          "[--cache PATH] [--no-fetch] [--out-train PATH] [--out-valid PATH] " +
-          "[--valid-n N] [--schema-frac F] [--min-leaves N] [--seed N]",
+          "[--cache PATH] [--no-fetch] [--file PATH] [--out-train PATH] [--out-valid PATH] " +
+          "[--valid-n N] [--schema-frac F] [--min-leaves N] [--max N] [--seed N]",
       );
       process.exit(0);
     }

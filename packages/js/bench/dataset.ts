@@ -139,6 +139,9 @@ function parseArgs(argv: string[]): Args {
     } else if (k === "--help" || k === "-h") {
       printHelp();
       process.exit(0);
+    } else if (k.startsWith("-")) {
+      console.error(`error: unknown option: ${k}`);
+      process.exit(1);
     }
   }
   if ((a.outTrainPath || a.outEvalPath) && a.outPath === DEFAULTS.outPath) {
@@ -155,6 +158,14 @@ function parseArgs(argv: string[]): Args {
       console.error(`error: --${name} must be a number in [0, 1], got ${val}`);
       process.exit(1);
     }
+  }
+  if (!Number.isInteger(a.variations) || a.variations <= 0) {
+    console.error(`error: --variations must be a positive integer, got ${a.variations}`);
+    process.exit(1);
+  }
+  if (!Number.isInteger(a.seed)) {
+    console.error(`error: --seed must be an integer, got ${a.seed}`);
+    process.exit(1);
   }
   return a;
 }
