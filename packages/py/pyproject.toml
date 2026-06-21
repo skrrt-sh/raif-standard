@@ -1,6 +1,6 @@
 [project]
 name = "raif-format"
-version = "0.5.0"
+version = "0.6.0"
 description = "A repairable, token-efficient layer for the JSON language models produce (structured outputs, strict objects, JSON mode, tool args) — pure-Python encode/decode/fix/validate."
 readme = "README.md"
 license = "Apache-2.0"
