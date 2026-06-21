@@ -24,6 +24,7 @@ from .decode import (
 )
 from .encode import EncodeOptions, EncodeProfile, encode
 from .fix import fix
+from .stream import StreamingDecoder, StreamResult
 from .validate import validate
 
 __all__ = [
@@ -38,6 +39,8 @@ __all__ = [
     "RaifError",
     "EncodeOptions",
     "EncodeProfile",
+    "StreamingDecoder",
+    "StreamResult",
 ]
 
 __version__ = "0.5.0"
