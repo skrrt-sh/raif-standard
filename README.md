@@ -179,6 +179,25 @@ local, and self-hosted inference:
 These models emit RAIF, not JSON — decode their output with the package above
 (`pip install raif-format` → `from raif import decode`, or `raif-format` on npm).
 
+## Serve it on vLLM
+
+For self-hosted serving, [**raif-vllm**](https://github.com/skrrt-sh/raif-vllm) is a
+single vLLM plugin that makes a stock OpenAI endpoint speak RAIF transparently —
+existing clients get RAIF on `tools` and `response_format` with **no proxy and no
+client changes**. The model emits compact RAIF-G and the plugin decodes it to JSON
+at the boundary, so the `decode()` step moves server-side. Verified end-to-end on
+vLLM 0.19 (A40).
+
+```sh
+pip install raif-vllm
+VLLM_PLUGINS=raif vllm serve <base> --enable-lora --lora-modules raif=<lora> \
+  --reasoning-parser raif --enable-auto-tool-choice --tool-call-parser raif
+```
+
+The three layers ship independently: **format** (this repo, `raif-format`) ·
+**model** ([raif-lora](https://github.com/skrrt-sh/raif-lora)) ·
+**serving** ([raif-vllm](https://github.com/skrrt-sh/raif-vllm)).
+
 ## Scope
 
 RAIF covers a single JSON object of LLM output: strings, numbers, booleans, nulls,
