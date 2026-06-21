@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.jpg" alt="RAIF" width="640">
+  <img src="https://raw.githubusercontent.com/skrrt-sh/raif-standard/main/assets/banner.jpg" alt="RAIF" width="640">
 </p>
 
 <h1 align="center">RAIF</h1>
@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/raif-demo.gif" alt="RAIF demo — self-repairing decode, truncation recovery, and 9.2% fewer tokens on 10,677 real function-call payloads" width="760">
+  <img src="https://raw.githubusercontent.com/skrrt-sh/raif-standard/main/assets/raif-demo.gif" alt="RAIF demo — self-repairing decode, truncation recovery, and 9.2% fewer tokens on 10,677 real function-call payloads" width="760">
 </p>
 
 ---
